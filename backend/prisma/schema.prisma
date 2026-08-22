@@ -1,0 +1,123 @@
+// GlobeTrotter — relational schema
+// Doubles as the ERD for the pitch. Column names are snake_case so the raw
+// budget SQL in the plan runs verbatim against this database.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           Int      @id @default(autoincrement())
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  name         String
+  photoUrl     String?  @map("photo_url")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  trips Trip[]
+
+  @@map("users")
+}
+
+model Trip {
+  id            Int      @id @default(autoincrement())
+  userId        Int      @map("user_id")
+  name          String
+  description   String?
+  startDate     DateTime @map("start_date") @db.Date
+  endDate       DateTime @map("end_date") @db.Date
+  coverPhotoUrl String?  @map("cover_photo_url")
+  targetBudget  Decimal? @map("target_budget") @db.Decimal(10, 2)
+  isPublic      Boolean  @default(false) @map("is_public")
+  shareSlug     String?  @unique @map("share_slug")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  user  User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  stops TripStop[]
+
+  @@index([userId])
+  @@map("trips")
+}
+
+model City {
+  id         Int     @id @default(autoincrement())
+  name       String
+  country    String
+  region     String
+  costIndex  Int     @map("cost_index") // 1 (cheap) .. 5 (expensive)
+  popularity Int     @default(0)
+  imageUrl   String? @map("image_url")
+  latitude   Float?
+  longitude  Float?
+
+  activities Activity[]
+  tripStops  TripStop[]
+
+  @@unique([name, country])
+  @@index([country])
+  @@map("cities")
+}
+
+/// The join that makes this a real relational app: one trip -> many city stays.
+model TripStop {
+  id                 Int      @id @default(autoincrement())
+  tripId             Int      @map("trip_id")
+  cityId             Int      @map("city_id")
+  arrivalDate        DateTime @map("arrival_date") @db.Date
+  departureDate      DateTime @map("departure_date") @db.Date
+  sortOrder          Int      @map("sort_order") // gaps of 10 so inserts don't renumber
+  transportCost      Decimal  @default(0) @map("transport_cost") @db.Decimal(10, 2)
+  accommodationCost  Decimal  @default(0) @map("accommodation_cost") @db.Decimal(10, 2)
+  notes              String?
+  createdAt          DateTime @default(now()) @map("created_at")
+
+  trip       Trip           @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  city       City           @relation(fields: [cityId], references: [id])
+  activities StopActivity[]
+
+  @@unique([tripId, sortOrder])
+  @@index([tripId])
+  @@map("trip_stops")
+}
+
+model Activity {
+  id              Int     @id @default(autoincrement())
+  cityId          Int     @map("city_id")
+  name            String
+  description     String?
+  category        String // sightseeing | food | outdoor | culture | nightlife | shopping
+  estimatedCost   Decimal @map("estimated_cost") @db.Decimal(10, 2)
+  durationMinutes Int     @map("duration_minutes")
+  imageUrl        String? @map("image_url")
+
+  city     City           @relation(fields: [cityId], references: [id], onDelete: Cascade)
+  stopLinks StopActivity[]
+
+  @@index([cityId])
+  @@index([category])
+  @@map("activities")
+}
+
+/// A user's chosen activity for one specific stop. custom_cost overrides the
+/// catalogue price without mutating shared catalogue data.
+model StopActivity {
+  id            Int       @id @default(autoincrement())
+  tripStopId    Int       @map("trip_stop_id")
+  activityId    Int       @map("activity_id")
+  scheduledDate DateTime? @map("scheduled_date") @db.Date
+  scheduledTime String?   @map("scheduled_time") // "14:30"
+  customCost    Decimal?  @map("custom_cost") @db.Decimal(10, 2)
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  tripStop TripStop @relation(fields: [tripStopId], references: [id], onDelete: Cascade)
+  activity Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+
+  @@index([tripStopId])
+  @@map("stop_activities")
+}
