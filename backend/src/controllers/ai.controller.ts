@@ -33,6 +33,16 @@ interface GeneratedPlan {
   stops: GeneratedPlanStop[];
 }
 
+interface PlanFallbackReason {
+  code: 'missing_groq_key' | 'groq_http_error' | 'groq_empty_response' | 'groq_invalid_json' | 'groq_invalid_plan';
+  message: string;
+}
+
+interface GroqPlanResult {
+  plan: GeneratedPlan | null;
+  fallbackReason?: PlanFallbackReason;
+}
+
 const generatedPlanSchema = {
   type: 'object',
   additionalProperties: false,
@@ -105,7 +115,12 @@ async function findCandidateActivities(cityIds: number[], interests: string[], b
   });
 }
 
-function fallbackPlan(input: AiPlanInput, pickedCities: CandidateCity[], candidateActivities: CandidateActivity) {
+function fallbackPlan(
+  input: AiPlanInput,
+  pickedCities: CandidateCity[],
+  candidateActivities: CandidateActivity,
+  fallbackReason: PlanFallbackReason,
+) {
   const daysPerStop = Math.max(1, Math.floor(input.durationDays / Math.max(1, Math.min(pickedCities.length, 3))));
   const cities = pickedCities.slice(0, 3);
   const stops = cities.map((city, index) => {
@@ -123,8 +138,9 @@ function fallbackPlan(input: AiPlanInput, pickedCities: CandidateCity[], candida
 
   return {
     source: 'seeded-fallback' as const,
+    fallbackReason,
     title: `${input.durationDays}-day ${input.travelStyle || 'balanced'} itinerary`,
-    summary: 'Generated locally because the LLM was unavailable or returned an invalid plan.',
+    summary: fallbackReason.message,
     targetBudget: input.budget ?? null,
     interests: input.interests,
     stops,
@@ -132,10 +148,18 @@ function fallbackPlan(input: AiPlanInput, pickedCities: CandidateCity[], candida
   };
 }
 
-async function callGroqPlan(input: AiPlanInput, cities: CandidateCity[], activities: CandidateActivity): Promise<GeneratedPlan | null> {
-  if (!env.groqApiKey) return null;
+async function callGroqPlan(input: AiPlanInput, cities: CandidateCity[], activities: CandidateActivity): Promise<GroqPlanResult> {
+  if (!env.groqApiKey) {
+    return {
+      plan: null,
+      fallbackReason: {
+        code: 'missing_groq_key',
+        message: 'Generated locally because GROQ_API_KEY is not configured on the backend.',
+      },
+    };
+  }
 
-  const response = await fetch('https://api.groq.com/openai/v1/responses', {
+  const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${env.groqApiKey}`,
@@ -143,7 +167,8 @@ async function callGroqPlan(input: AiPlanInput, cities: CandidateCity[], activit
     },
     body: JSON.stringify({
       model: env.groqModel,
-      input: [
+      temperature: 0.75,
+      messages: [
         {
           role: 'system',
           content:
@@ -179,11 +204,10 @@ async function callGroqPlan(input: AiPlanInput, cities: CandidateCity[], activit
           }),
         },
       ],
-      text: {
-        format: {
-          type: 'json_schema',
+      response_format: {
+        type: 'json_schema',
+        json_schema: {
           name: 'globetrotter_plan',
-          strict: true,
           schema: generatedPlanSchema,
         },
       },
@@ -191,18 +215,39 @@ async function callGroqPlan(input: AiPlanInput, cities: CandidateCity[], activit
   });
 
   if (!response.ok) {
-    console.warn('Groq plan request failed', response.status, await response.text().catch(() => ''));
-    return null;
+    const details = await response.text().catch(() => '');
+    console.warn('Groq plan request failed', response.status, details);
+    return {
+      plan: null,
+      fallbackReason: {
+        code: 'groq_http_error',
+        message: `Generated locally because Groq returned HTTP ${response.status}. Check the backend logs for details.`,
+      },
+    };
   }
 
-  const payload = await response.json() as { output_text?: string; output?: Array<{ content?: Array<{ text?: string }> }> };
-  const text = payload.output_text ?? payload.output?.flatMap((item) => item.content ?? []).find((content) => content.text)?.text;
-  if (!text) return null;
+  const payload = await response.json() as { choices?: Array<{ message?: { content?: string | null } }> };
+  const text = payload.choices?.[0]?.message?.content;
+  if (!text) {
+    return {
+      plan: null,
+      fallbackReason: {
+        code: 'groq_empty_response',
+        message: 'Generated locally because Groq returned an empty planning response.',
+      },
+    };
+  }
 
   try {
-    return JSON.parse(text) as GeneratedPlan;
+    return { plan: JSON.parse(text) as GeneratedPlan };
   } catch {
-    return null;
+    return {
+      plan: null,
+      fallbackReason: {
+        code: 'groq_invalid_json',
+        message: 'Generated locally because Groq returned a response that was not valid JSON.',
+      },
+    };
   }
 }
 
@@ -248,9 +293,20 @@ export const planTrip = asyncHandler(async (req: Request, res: Response) => {
   const cities = await findCandidateCities(input.destinations);
   const activities = await findCandidateActivities(cities.map((city) => city.id), input.interests, input.budget);
   const generated = await callGroqPlan(input, cities, activities);
-  const llmPlan = generated ? hydrateGeneratedPlan(input, generated, cities, activities) : null;
+  const llmPlan = generated.plan ? hydrateGeneratedPlan(input, generated.plan, cities, activities) : null;
 
-  res.json(llmPlan ?? fallbackPlan(input, cities, activities));
+  res.json(
+    llmPlan ??
+      fallbackPlan(
+        input,
+        cities,
+        activities,
+        generated.fallbackReason ?? {
+          code: 'groq_invalid_plan',
+          message: 'Generated locally because Groq returned city or activity IDs that are not in the catalogue.',
+        },
+      ),
+  );
 });
 
 export const recommendActivities = asyncHandler(async (req: Request, res: Response) => {

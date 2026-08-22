@@ -207,6 +207,10 @@ export interface AiPlanStop {
 
 export interface AiPlanResponse {
   source: "groq" | "seeded-fallback";
+  fallbackReason?: {
+    code: "missing_groq_key" | "groq_http_error" | "groq_empty_response" | "groq_invalid_json" | "groq_invalid_plan";
+    message: string;
+  };
   title: string;
   summary: string;
   targetBudget: number | null;

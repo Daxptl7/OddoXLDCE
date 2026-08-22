@@ -118,6 +118,11 @@ export function AiCopilotPanel({ trip, budget }: { trip: SerializedTrip; budget?
               </span>
             </div>
             <p className="mt-1 text-sm text-muted">{aiPlan.data.summary}</p>
+            {aiPlan.data.fallbackReason ? (
+              <p className="mt-3 rounded-xl bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800">
+                {aiPlan.data.fallbackReason.message}
+              </p>
+            ) : null}
             <div className="mt-4 flex flex-col gap-3">
               {aiPlan.data.stops.map((stop) => (
                 <div key={stop.city.id} className="rounded-2xl border border-border p-3">
