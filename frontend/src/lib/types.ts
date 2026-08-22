@@ -1,11 +1,15 @@
 // Typed straight off backend/src/types/index.ts and services/serializers.ts —
 // these shapes are the wire contract, not a guess.
 
+export type UserRole = "USER" | "GUIDE" | "ADMIN";
+
 export interface SerializedUser {
   id: number;
   name: string;
   email: string;
   photoUrl: string | null;
+  phone: string | null;
+  role: UserRole;
   createdAt: string;
 }
 
@@ -151,11 +155,12 @@ export interface AuthResponse {
 }
 
 export interface DashboardResponse {
-  user: { name: string; photoUrl: string | null };
-  stats: { tripCount: number; upcomingCount: number };
+  user: { name: string; photoUrl: string | null; role: UserRole };
+  stats: { tripCount: number; upcomingCount: number; guideCount: number };
   recentTrips: SerializedTrip[];
   upcomingTrips: SerializedTrip[];
   recommendedCities: SerializedCity[];
+  guideBookings: SerializedBooking[];
 }
 
 export interface TripListResponse {
@@ -418,4 +423,151 @@ export interface AiFoodSuggestionsInput {
   hotelName?: string | null;
   hotelAddress?: string | null;
   dietaryPreference?: string;
+}
+
+// ── Guides & bookings ────────────────────────────────────────────────
+
+export type BookingStatus = "PENDING" | "CONFIRMED" | "DECLINED" | "CANCELLED" | "COMPLETED";
+
+export interface SerializedGuide {
+  id: number;
+  userId: number;
+  name: string;
+  /** Null until a booking with this guide is confirmed (admins always see it). */
+  email: string | null;
+  phone: string | null;
+  photoUrl: string | null;
+  headline: string | null;
+  bio: string | null;
+  languages: string[];
+  specialties: string[];
+  dailyRate: number;
+  experienceYears: number;
+  rating: number;
+  isActive: boolean;
+  isVerified: boolean;
+  cityId: number;
+  city?: SerializedCity;
+  tripsGuided?: number;
+  createdAt: string;
+}
+
+export interface SerializedBooking {
+  id: number;
+  guideId: number;
+  touristId: number;
+  tripId: number | null;
+  cityId: number;
+  startDate: string | null;
+  endDate: string | null;
+  days: number;
+  headcount: number;
+  dailyRate: number;
+  totalCost: number;
+  status: BookingStatus;
+  notes: string | null;
+  guideNote: string | null;
+  adminNote: string | null;
+  createdAt: string;
+  updatedAt: string;
+  guide?: SerializedGuide;
+  tourist?: { id: number; name: string; email: string | null; phone: string | null; photoUrl: string | null };
+  trip?: { id: number; name: string; startDate: string | null; endDate: string | null } | null;
+  city?: SerializedCity;
+}
+
+export interface GuideProfileInput {
+  cityId: number;
+  headline?: string | null;
+  bio?: string | null;
+  languages?: string[];
+  specialties?: string[];
+  dailyRate: number;
+  experienceYears?: number;
+}
+
+export interface SignupInput {
+  name: string;
+  email: string;
+  password: string;
+  photoUrl?: string | null;
+  phone?: string | null;
+  role?: UserRole;
+  guideProfile?: GuideProfileInput;
+}
+
+export interface GuideListResponse {
+  guides: SerializedGuide[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export interface GuideDetailResponse {
+  guide: SerializedGuide;
+  busyRanges: Array<{ startDate: string; endDate: string }>;
+}
+
+export interface BookingListResponse {
+  bookings: SerializedBooking[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export interface CreateBookingInput {
+  guideId: number;
+  tripId?: number | null;
+  startDate: string;
+  endDate: string;
+  headcount?: number;
+  notes?: string | null;
+}
+
+export interface GuideAssignmentsResponse extends BookingListResponse {
+  guide: SerializedGuide;
+  stats: {
+    pending: number;
+    confirmed: number;
+    upcoming: number;
+    daysBooked: number;
+    earnings: number;
+  };
+}
+
+export interface AdminStats {
+  travellers: number;
+  guides: number;
+  admins: number;
+  activeGuides: number;
+  trips: number;
+  bookings: number;
+  pendingBookings: number;
+  confirmedBookings: number;
+  upcomingBookings: number;
+  bookingRevenue: number;
+  byStatus: Partial<Record<BookingStatus, number>>;
+}
+
+export interface AdminUser extends SerializedUser {
+  tripCount: number;
+  bookingCount: number;
+  guide: SerializedGuide | null;
+}
+
+export interface AdminUserListResponse {
+  users: AdminUser[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export interface AdminUpdateBookingInput {
+  guideId?: number;
+  status?: BookingStatus;
+  startDate?: string;
+  endDate?: string;
+  headcount?: number;
+  adminNote?: string | null;
+  force?: boolean;
 }

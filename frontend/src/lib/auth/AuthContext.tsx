@@ -6,13 +6,15 @@ import { useQueryClient } from "@tanstack/react-query";
 import { auth } from "@/lib/api/endpoints";
 import { ApiError } from "@/lib/api/client";
 import { clearToken, getToken, setToken } from "@/lib/auth/token";
-import type { SerializedUser } from "@/lib/types";
+import type { SerializedUser, SignupInput, UserRole } from "@/lib/types";
 
 interface AuthContextValue {
   user: SerializedUser | null;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  signup: (data: { name: string; email: string; password: string; photoUrl?: string | null }) => Promise<void>;
+  /** Convenience mirror of user.role — undefined while signed out. */
+  role: UserRole | undefined;
+  login: (email: string, password: string) => Promise<SerializedUser>;
+  signup: (data: SignupInput) => Promise<SerializedUser>;
   logout: () => Promise<void>;
   refresh: () => Promise<void>;
 }
@@ -56,16 +58,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     hydrate();
   }, []);
 
+  // Both return the account so callers can route on its role without waiting
+  // for the context state to settle.
   async function login(email: string, password: string) {
     const { user: loggedInUser, token } = await auth.login({ email, password });
     setToken(token);
     setUser(loggedInUser);
+    return loggedInUser;
   }
 
-  async function signup(data: { name: string; email: string; password: string; photoUrl?: string | null }) {
+  async function signup(data: SignupInput) {
     const { user: newUser, token } = await auth.signup(data);
     setToken(token);
     setUser(newUser);
+    return newUser;
   }
 
   async function logout() {
@@ -77,11 +83,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     clearToken();
     setUser(null);
     queryClient.clear();
-    router.push("/login");
+    router.push("/");
   }
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, signup, logout, refresh: hydrate }}>
+    <AuthContext.Provider value={{ user, isLoading, role: user?.role, login, signup, logout, refresh: hydrate }}>
       {children}
     </AuthContext.Provider>
   );

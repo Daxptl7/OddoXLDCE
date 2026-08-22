@@ -13,6 +13,7 @@ import { ErrorBanner, errorMessage } from "@/components/ui/ErrorBanner";
 
 const schema = z.object({
   name: z.string().trim().min(2, "Name must be at least 2 characters").max(80),
+  phone: z.string().trim().max(24),
   photoUrl: z.string().trim().url("Enter a valid URL").or(z.literal("")),
 });
 
@@ -29,14 +30,18 @@ export default function ProfilePage() {
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
-    defaultValues: { name: user?.name ?? "", photoUrl: user?.photoUrl ?? "" },
+    defaultValues: { name: user?.name ?? "", phone: user?.phone ?? "", photoUrl: user?.photoUrl ?? "" },
   });
 
   async function onSubmit(values: FormValues) {
     setFormError(null);
     setSaved(false);
     try {
-      await auth.updateProfile({ name: values.name, photoUrl: values.photoUrl || null });
+      await auth.updateProfile({
+        name: values.name,
+        phone: values.phone.trim() || null,
+        photoUrl: values.photoUrl || null,
+      });
       await refresh();
       setSaved(true);
     } catch (error) {
@@ -55,6 +60,12 @@ export default function ProfilePage() {
           {saved ? <p className="text-sm text-success">Profile updated.</p> : null}
           <Input label="Email" value={user.email} disabled />
           <Input label="Name" error={errors.name?.message} {...register("name")} />
+          <Input
+            label="Phone (your guide sees this once a booking is confirmed)"
+            placeholder="+91 98765 43210"
+            error={errors.phone?.message}
+            {...register("phone")}
+          />
           <Input label="Photo URL (optional)" error={errors.photoUrl?.message} {...register("photoUrl")} />
           <Button type="submit" disabled={isSubmitting} className="self-start">
             {isSubmitting ? "Saving…" : "Save changes"}

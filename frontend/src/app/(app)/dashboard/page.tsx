@@ -11,7 +11,8 @@ import { Button } from "@/components/ui/Button";
 import { TripCard } from "@/components/trips/TripCard";
 import { DashboardTripAssistant } from "@/components/ai/DashboardTripAssistant";
 import { DashboardHotelExplorer } from "@/components/hotels/DashboardHotelExplorer";
-import { CalendarIcon, CompassIcon, MapPinIcon, PlusIcon, SparklesIcon } from "@/components/ui/Icons";
+import { BookingCard } from "@/components/guides/BookingCard";
+import { CalendarIcon, CompassIcon, MapPinIcon, PlusIcon, SparklesIcon, UsersIcon } from "@/components/ui/Icons";
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -21,7 +22,7 @@ export default function DashboardPage() {
   if (error) return <ErrorBanner message={errorMessage(error, "Could not load the dashboard")} />;
   if (!data) return null;
 
-  const { stats, recentTrips, upcomingTrips, recommendedCities } = data;
+  const { stats, recentTrips, upcomingTrips, recommendedCities, guideBookings } = data;
 
   return (
     <div className="flex flex-col gap-8">
@@ -41,7 +42,7 @@ export default function DashboardPage() {
         </Link>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <Card className="p-5">
           <div className="flex items-center gap-3">
             <span className="flex h-11 w-11 items-center justify-center rounded-full bg-rose-50 text-primary">
@@ -64,7 +65,46 @@ export default function DashboardPage() {
             </div>
           </div>
         </Card>
+        <Link href="/bookings" className="block">
+          <Card className="p-5 transition-shadow hover:shadow-md">
+            <div className="flex items-center gap-3">
+              <span className="flex h-11 w-11 items-center justify-center rounded-full bg-amber-50 text-amber-700">
+                <UsersIcon className="h-5 w-5" />
+              </span>
+              <div>
+                <p className="text-sm text-muted">Guides booked</p>
+                <p className="text-3xl font-bold text-foreground">{stats.guideCount}</p>
+              </div>
+            </div>
+          </Card>
+        </Link>
       </div>
+
+      <section className="flex flex-col gap-3">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-bold text-foreground">Your guides</h2>
+          <Link href="/guides" className="text-sm font-semibold text-primary hover:underline">
+            Find a guide →
+          </Link>
+        </div>
+        {guideBookings.length === 0 ? (
+          <EmptyState
+            title="No guide booked yet"
+            description="Heading somewhere you don't know? Hire a local for the days you need them."
+            action={
+              <Link href="/guides">
+                <Button>Browse guides</Button>
+              </Link>
+            }
+          />
+        ) : (
+          <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+            {guideBookings.map((booking) => (
+              <BookingCard key={booking.id} booking={booking} />
+            ))}
+          </div>
+        )}
+      </section>
 
       <section className="flex flex-col gap-3">
         <h2 className="text-xl font-bold text-foreground">Upcoming trips</h2>

@@ -12,13 +12,41 @@ import {
 } from '../utils/auth.js';
 
 export const signup = asyncHandler(async (req: Request, res: Response) => {
-  const { name, email, password, photoUrl } = req.body;
+  const { name, email, password, photoUrl, phone, role, guideProfile } = req.body;
 
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) throw ApiError.conflict('An account with that email already exists');
 
+  if (role === 'GUIDE') {
+    const city = await prisma.city.findUnique({ where: { id: guideProfile.cityId } });
+    if (!city) throw ApiError.badRequest('That city is not in our catalogue yet');
+  }
+
+  // One transaction: a guide account is never half-created without its profile.
   const user = await prisma.user.create({
-    data: { name, email, photoUrl: photoUrl ?? null, passwordHash: await hashPassword(password) },
+    data: {
+      name,
+      email,
+      photoUrl: photoUrl ?? null,
+      phone: phone ?? null,
+      role,
+      passwordHash: await hashPassword(password),
+      ...(role === 'GUIDE'
+        ? {
+            guideProfile: {
+              create: {
+                cityId: guideProfile.cityId,
+                headline: guideProfile.headline ?? null,
+                bio: guideProfile.bio ?? null,
+                languages: guideProfile.languages ?? [],
+                specialties: guideProfile.specialties ?? [],
+                dailyRate: guideProfile.dailyRate,
+                experienceYears: guideProfile.experienceYears ?? 0,
+              },
+            },
+          }
+        : {}),
+    },
   });
 
   const token = signToken(user);

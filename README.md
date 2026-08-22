@@ -25,22 +25,74 @@ npm run dev                   # http://localhost:4000
 
 Check it: `curl "http://localhost:4000/api/cities?q=par"` returns Paris.
 
-Demo login: `demo@globetrotter.app` / `demo1234` — comes with **Europe Summer
-2026** (Paris → Rome, 7 activities) already built, so the app is never demoed
-against an empty database.
+Demo logins — the seed builds one account per role, so every screen has data:
+
+| Role | Email | Password | Lands on |
+| --- | --- | --- | --- |
+| Traveller | `demo@globetrotter.app` | `demo1234` | `/dashboard` |
+| Guide | `amelie@guides.globetrotter.app` | `guide1234` | `/guide` |
+| Admin | `admin@globetrotter.app` | `admin1234` | `/admin` |
+
+The traveller comes with **Europe Summer 2026** (Paris → Rome, 7 activities)
+already built and Amelie already hired for the Paris days, so the app is never
+demoed against an empty database. The other four seeded guides cover Rome,
+Tokyo, Jaipur and Barcelona.
+
+## Three roles, one users table
+
+`users.role` is `USER | GUIDE | ADMIN`, and it is the only thing the API
+authorises against. `requireRole(...)` in `middleware/auth.ts` gates every
+router; the frontend mirrors it with `RoleGate` and a role-specific navbar so
+nobody is shown a tab that would 403.
+
+- **Traveller** browses `/guides`, hires one for a run of days, and sees that
+  guide on `/bookings` and on the dashboard.
+- **Guide** gets `/guide`: the travellers assigned to them, which days, and
+  accept / decline / mark-complete. Their public listing lives on
+  `/guide/profile`.
+- **Admin** gets `/admin`: reassign a booking to a different guide, move its
+  dates, force a status, verify or pause a guide, and change anyone's role.
+
+**Contact details are earned, not browsed.** The directory never returns a
+guide's phone or email. Both sides' contacts appear only once a booking reaches
+`CONFIRMED` (`serializeBooking` decides this, not the UI), and admins always see
+them because that is the support desk.
+
+**A guide cannot be in two places at once.** Every booking write re-checks the
+guide's calendar — inclusive day ranges, ignoring declined and cancelled rows —
+and 409s with the clashing dates spelled out. Travellers get the same check
+against their own bookings. Admin reassignment runs it too, and is the only path
+that can override it, explicitly, with `force: true`.
+
+**Prices are snapshots.** `guide_bookings.daily_rate` and `total_cost` are
+written at booking time, so a guide raising their rate never rewrites what
+someone already agreed to pay. Reassigning to a different guide deliberately
+re-prices to the new guide's rate.
+
+**Admins cannot demote themselves.** The one guardrail that stops the console
+from being locked out.
 
 ## The data model
 
-Six tables. The whole design is in `backend/prisma/schema.prisma`.
+Eight tables. The whole design is in `backend/prisma/schema.prisma`.
 
 ```
 users ──< trips ──< trip_stops >── cities
-                        │              │
-                        └──< stop_activities >── activities
+   │                    │              │
+   │                    └──< stop_activities >── activities
+   │
+   ├──< guide_profiles >── cities
+   └──< guide_bookings >── guide_profiles
 ```
 
 - **`trip_stops`** is the join that makes this relational: one trip, many city
   stays, each with its own dates, costs and `sort_order`.
+- **`guide_profiles`** is one-to-one with a `GUIDE` user and carries the area
+  they cover, their rate and their languages. Demoting a guide parks the profile
+  (`is_active = false`) rather than deleting the booking history hanging off it.
+- **`guide_bookings`** joins a traveller to a guide for an inclusive day range,
+  optionally attached to a trip. `days` counts both ends: the 1st to the 3rd is
+  three days, not two.
 - **`sort_order`** is written in gaps of 10, so reordering is an integer update
   and inserting between two stops never renumbers the rest.
 - **`stop_activities.custom_cost`** lets a user override a catalogue price for
@@ -100,6 +152,7 @@ backend/src/
 ├── controllers/         request → service → response
 ├── services/
 │   ├── budget.service.js      the derived budget (raw SQL)
+│   ├── guide.service.js       guide lookups, day maths, double-booking guard
 │   ├── itinerary.service.js   day-by-day plan for the itinerary + calendar views
 │   ├── stop.service.js        sort_order, reordering, date re-flow
 │   ├── trip.service.js        ownership checks, deep include, warnings
@@ -118,6 +171,9 @@ it — `getOwnedTrip`, `getOwnedStop`, `getOwnedStopActivity` in
 Next.js (App Router) + TypeScript, talking to the API above via a typed client
 and TanStack Query. Auth, dashboard, trip CRUD, the itinerary builder
 (add/reorder stops, attach activities), the derived budget with charts, the
-itinerary/calendar view, and the public share page are all built. See
+itinerary/calendar view, the public share page, and the three role workspaces
+(`/guides`, `/bookings`, `/guide`, `/admin`) are all built. Signing in routes you
+to your own home page — the edge proxy reads the role claim off the session token
+for that, and every page re-checks it against the API. See
 `frontend/README.md` for the full layout and how to run it, and `docs/API.md`
 for the endpoint reference it's built against.

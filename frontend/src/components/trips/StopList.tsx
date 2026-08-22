@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import {
   DndContext,
   PointerSensor,
@@ -36,6 +37,7 @@ import {
   MapPinIcon,
   PlusIcon,
   TrashIcon,
+  UsersIcon,
   UtensilsIcon,
   WalletIcon,
 } from "@/components/ui/Icons";
@@ -267,6 +269,27 @@ function SortableStopCard({
                 <UtensilsIcon className="h-4 w-4 text-orange-500" />
                 Food & Delicacies
               </Button>
+
+              {stop.city ? (
+                <Link
+                  href={{
+                    pathname: "/guides",
+                    query: {
+                      cityId: stop.city.id,
+                      city: stop.city.name,
+                      tripId,
+                      ...(stop.arrivalDate ? { startDate: stop.arrivalDate } : {}),
+                      ...(stop.departureDate ? { endDate: stop.departureDate } : {}),
+                    },
+                  }}
+                  title={`Hire a local guide in ${stop.city.name}`}
+                >
+                  <Button size="sm" variant="secondary">
+                    <UsersIcon className="h-4 w-4 text-primary" />
+                    Hire a guide
+                  </Button>
+                </Link>
+              ) : null}
             </div>
           </div>
         </div>

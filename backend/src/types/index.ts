@@ -1,4 +1,4 @@
-import type { Prisma } from '@prisma/client';
+import type { BookingStatus, Prisma, UserRole } from '@prisma/client';
 
 // ── Raw SQL row types for budget.service ─────────────────────────────
 
@@ -199,6 +199,8 @@ export interface SerializedUser {
   name: string;
   email: string;
   photoUrl: string | null;
+  phone: string | null;
+  role: UserRole;
   createdAt: Date;
 }
 
@@ -270,4 +272,52 @@ export interface SerializedTrip {
   stopCount?: number;
   stops?: SerializedStop[];
   owner?: { name: string; photoUrl: string | null };
+}
+
+// ── Guides & bookings ────────────────────────────────────────────────
+
+export interface SerializedGuide {
+  id: number;
+  userId: number;
+  name: string;
+  email: string | null;
+  phone: string | null;
+  photoUrl: string | null;
+  headline: string | null;
+  bio: string | null;
+  languages: string[];
+  specialties: string[];
+  dailyRate: number;
+  experienceYears: number;
+  rating: number;
+  isActive: boolean;
+  isVerified: boolean;
+  city?: SerializedCity;
+  cityId: number;
+  tripsGuided?: number;
+  createdAt: Date;
+}
+
+export interface SerializedBooking {
+  id: number;
+  guideId: number;
+  touristId: number;
+  tripId: number | null;
+  cityId: number;
+  startDate: string | null;
+  endDate: string | null;
+  days: number;
+  headcount: number;
+  dailyRate: number;
+  totalCost: number;
+  status: BookingStatus;
+  notes: string | null;
+  guideNote: string | null;
+  adminNote: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  guide?: SerializedGuide;
+  tourist?: { id: number; name: string; email: string | null; phone: string | null; photoUrl: string | null };
+  trip?: { id: number; name: string; startDate: string | null; endDate: string | null } | null;
+  city?: SerializedCity;
 }

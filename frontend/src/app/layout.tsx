@@ -14,8 +14,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "GoVenture",
-  description: "Plan a multi-city trip and watch the budget derive itself from the itinerary.",
+  title: "GoVenture — Smart itineraries, local guides, real-time budgets",
+  description:
+    "Plan a multi-city trip in one workspace: chain cities, schedule activities, watch the budget derive itself from the itinerary, and hire a local guide for the days you need one.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

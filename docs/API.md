@@ -18,19 +18,32 @@ Dates are `YYYY-MM-DD` strings; times are `HH:MM`.
 
 | Method | Path | Body | Notes |
 |---|---|---|---|
-| POST | `/auth/signup` | `{ name, email, password, photoUrl? }` | password ≥ 8 chars → `201 { user, token }` |
+| POST | `/auth/signup` | `{ name, email, password, photoUrl?, phone?, role?, guideProfile? }` | password ≥ 8 chars → `201 { user, token }` |
 | POST | `/auth/login` | `{ email, password }` | `{ user, token }` |
 | POST | `/auth/logout` | — | clears the cookie |
-| GET | `/auth/me` | — | current user |
-| PATCH | `/auth/me` | `{ name?, photoUrl? }` | profile edit |
+| GET | `/auth/me` | — | current user, including `role` |
+| PATCH | `/auth/me` | `{ name?, photoUrl?, phone? }` | profile edit — `role` is deliberately not editable here |
 
 Login and signup are rate limited to 40 attempts per 15 minutes per IP.
+
+### Roles
+
+`user.role` is `USER` (traveller), `GUIDE` or `ADMIN`, and it is also a claim on
+the JWT. Signup accepts `USER` or `GUIDE` only — **admins are seeded or promoted
+by another admin, never self-registered**. Signing up as `GUIDE` requires
+`guideProfile: { cityId, dailyRate, headline?, bio?, languages?, specialties?,
+experienceYears? }`; the account and its profile are created in one write.
+
+Every guide, booking and admin route below re-reads the role from the database
+via `requireAuth` → `requireRole(...)`. Wrong role is a `403`, not a `404`.
 
 ## Dashboard
 
 | Method | Path | Returns |
 |---|---|---|
-| GET | `/dashboard` | `{ user, stats, recentTrips, upcomingTrips, recommendedCities }` |
+| GET | `/dashboard` | `{ user, stats, recentTrips, upcomingTrips, recommendedCities, guideBookings }` |
+
+`guideBookings` is the traveller's next three pending or confirmed guides.
 
 ## Trips
 
@@ -97,6 +110,66 @@ others without renumbering the rest.
 
 `customCost` overrides the catalogue price for this trip only — the shared
 `activities` row is never mutated. Send `null` to fall back to the catalogue price.
+
+## Guides
+
+Any signed-in account can read the directory. The rest is `GUIDE` only.
+
+| Method | Path | Body / query | Notes |
+|---|---|---|---|
+| GET | `/guides` | `?q=&cityId=&city=&country=&language=&maxRate=&startDate=&endDate=&sort=rating\|price\|experience&limit=&offset=` | active guides only; passing both dates returns **only guides free across that whole range** |
+| GET | `/guides/:id` | — | `{ guide, busyRanges }` — the ranges let the booking form warn before the server has to |
+| GET | `/guides/me` | — | **GUIDE** — own profile, contact included |
+| PATCH | `/guides/me` | `{ cityId?, headline?, bio?, languages?, specialties?, dailyRate?, experienceYears?, isActive? }` | **GUIDE** — `isVerified` and `rating` are not self-editable |
+| GET | `/guides/me/assignments` | `?status=&scope=all\|upcoming\|past&limit=&offset=` | **GUIDE** — `{ guide, bookings, stats, total }`; stats carry pending / confirmed / daysBooked / earnings |
+| PATCH | `/guides/me/assignments/:id` | `{ status: CONFIRMED\|DECLINED\|COMPLETED, guideNote? }` | **GUIDE** — only for bookings assigned to the caller |
+
+A guide may move `PENDING → CONFIRMED | DECLINED` and `CONFIRMED → COMPLETED |
+DECLINED`. Anything else is a `400`.
+
+## Bookings (traveller)
+
+`USER` role only — guides do not hire guides, and the admin edits bookings
+through `/admin` instead.
+
+| Method | Path | Body / query | Notes |
+|---|---|---|---|
+| GET | `/bookings` | `?status=&scope=all\|upcoming\|past&limit=&offset=` | `{ bookings, total, limit, offset }` |
+| POST | `/bookings` | `{ guideId, startDate, endDate, headcount?, tripId?, notes? }` | `201 { booking }`, status `PENDING` |
+| GET | `/bookings/:id` | — | 403 unless it is yours |
+| POST | `/bookings/:id/cancel` | `{ notes? }` | `PENDING` or `CONFIRMED` → `CANCELLED` |
+
+`days` is inclusive of both ends and `totalCost` is `dailyRate × days`, both
+snapshotted at booking time. `tripId` must be a trip you own.
+
+`409` on two counts: the guide is already booked across those days, or **you**
+already have a different guide booked across them.
+
+### Contact visibility
+
+`guide.email`, `guide.phone`, `tourist.email` and `tourist.phone` come back
+`null` until the booking is `CONFIRMED` or `COMPLETED`. The directory never
+returns them at all. Admin reads bypass this — that is the support desk.
+
+## Admin
+
+`ADMIN` role only.
+
+| Method | Path | Body / query | Notes |
+|---|---|---|---|
+| GET | `/admin/stats` | — | headline counts, `byStatus`, booked value |
+| GET | `/admin/users` | `?q=&role=&limit=&offset=` | each user carries `tripCount`, `bookingCount` and their `guide` profile |
+| PATCH | `/admin/users/:id/role` | `{ role, cityId?, dailyRate? }` | promoting to `GUIDE` mints the profile — `cityId` is required when they have none |
+| GET | `/admin/guides` | `?q=&cityId=&status=all\|active\|inactive\|unverified&limit=&offset=` | |
+| PATCH | `/admin/guides/:id` | `{ isActive?, isVerified?, cityId?, dailyRate? }` | |
+| GET | `/admin/bookings` | `?q=&status=&guideId=&cityId=&limit=&offset=` | contact details always included |
+| PATCH | `/admin/bookings/:id` | `{ guideId?, status?, startDate?, endDate?, headcount?, adminNote?, force? }` | the reassignment endpoint |
+| DELETE | `/admin/bookings/:id` | — | hard delete; travellers cancel instead |
+
+Reassigning re-prices the booking to the new guide's rate and re-checks their
+calendar. A clash is a `409` naming the conflicting booking; `force: true` is the
+only way past it. An admin cannot demote themselves out of `ADMIN` — that would
+lock the console.
 
 ## Catalogue (seeded reference data, no auth needed)
 

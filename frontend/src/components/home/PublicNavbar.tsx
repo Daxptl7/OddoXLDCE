@@ -5,6 +5,14 @@ import Link from "next/link";
 import clsx from "clsx";
 import { LogoIcon, MenuIcon, UserIcon } from "@/components/ui/Icons";
 
+const sections = [
+  { href: "#about", label: "About" },
+  { href: "#services", label: "Services" },
+  { href: "#guides", label: "Guides" },
+  { href: "#careers", label: "Careers" },
+  { href: "#faq", label: "FAQ" },
+];
+
 export function PublicNavbar() {
   const [scrolled, setScrolled] = useState(false);
 
@@ -31,6 +39,21 @@ export function PublicNavbar() {
           <LogoIcon className="h-8 w-8 text-primary" />
           <span className={scrolled ? "text-foreground" : "text-white"}>GoVenture</span>
         </Link>
+
+        <nav className="hidden items-center gap-1 md:flex">
+          {sections.map(({ href, label }) => (
+            <a
+              key={href}
+              href={href}
+              className={clsx(
+                "rounded-full px-3.5 py-2 text-sm font-semibold transition-colors",
+                scrolled ? "text-muted hover:bg-[#f7f7f7] hover:text-foreground" : "text-white/85 hover:bg-white/15 hover:text-white",
+              )}
+            >
+              {label}
+            </a>
+          ))}
+        </nav>
 
         <div className="flex items-center gap-3">
           <Link

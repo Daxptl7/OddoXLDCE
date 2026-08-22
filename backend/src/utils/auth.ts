@@ -1,3 +1,4 @@
+import type { UserRole } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { customAlphabet } from 'nanoid';
@@ -12,6 +13,8 @@ const slugId = customAlphabet('23456789abcdefghijkmnpqrstuvwxyz', 12);
 export interface JwtPayload {
   sub: number;
   email: string;
+  /** Routing hint only — every protected route re-reads the role from the database. */
+  role: UserRole;
 }
 
 export const hashPassword = (plain: string): Promise<string> => bcrypt.hash(plain, SALT_ROUNDS);
@@ -19,8 +22,10 @@ export const hashPassword = (plain: string): Promise<string> => bcrypt.hash(plai
 export const verifyPassword = (plain: string, hash: string): Promise<boolean> =>
   bcrypt.compare(plain, hash);
 
-export const signToken = (user: { id: number; email: string }): string =>
-  jwt.sign({ sub: user.id, email: user.email }, env.jwtSecret, { expiresIn: env.jwtExpiresIn as jwt.SignOptions['expiresIn'] });
+export const signToken = (user: { id: number; email: string; role: UserRole }): string =>
+  jwt.sign({ sub: user.id, email: user.email, role: user.role }, env.jwtSecret, {
+    expiresIn: env.jwtExpiresIn as jwt.SignOptions['expiresIn'],
+  });
 
 export const verifyToken = (token: string): JwtPayload =>
   jwt.verify(token, env.jwtSecret) as unknown as JwtPayload;

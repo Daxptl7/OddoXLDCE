@@ -11,17 +11,100 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+/// Three logins share one table; `role` is what the API authorises against.
+enum UserRole {
+  USER
+  GUIDE
+  ADMIN
+
+  @@map("user_role")
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  DECLINED
+  CANCELLED
+  COMPLETED
+
+  @@map("booking_status")
+}
+
 model User {
   id           Int      @id @default(autoincrement())
   email        String   @unique
   passwordHash String   @map("password_hash")
   name         String
   photoUrl     String?  @map("photo_url")
+  phone        String?
+  role         UserRole @default(USER)
   createdAt    DateTime @default(now()) @map("created_at")
 
-  trips Trip[]
+  trips        Trip[]
+  guideProfile GuideProfile?
+  bookings     GuideBooking[] @relation("TouristBookings")
 
+  @@index([role])
   @@map("users")
+}
+
+/// A guide is a User with role GUIDE plus this profile: the area they cover
+/// and what they charge. One profile per user, one home city per profile.
+model GuideProfile {
+  id              Int      @id @default(autoincrement())
+  userId          Int      @unique @map("user_id")
+  cityId          Int      @map("city_id")
+  headline        String?
+  bio             String?
+  languages       String[] @default([])
+  specialties     String[] @default([])
+  dailyRate       Decimal  @map("daily_rate") @db.Decimal(10, 2)
+  experienceYears Int      @default(0) @map("experience_years")
+  rating          Float    @default(4.8)
+  isActive        Boolean  @default(true) @map("is_active")
+  isVerified      Boolean  @default(false) @map("is_verified")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  user     User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  city     City           @relation(fields: [cityId], references: [id])
+  bookings GuideBooking[]
+
+  @@index([cityId])
+  @@index([isActive])
+  @@map("guide_profiles")
+}
+
+/// A tourist hiring a guide for a date range. dailyRate/totalCost are snapshots
+/// so a later price change never rewrites what someone already agreed to pay.
+model GuideBooking {
+  id        Int           @id @default(autoincrement())
+  guideId   Int           @map("guide_id")
+  touristId Int           @map("tourist_id")
+  tripId    Int?          @map("trip_id")
+  cityId    Int           @map("city_id")
+  startDate DateTime      @map("start_date") @db.Date
+  endDate   DateTime      @map("end_date") @db.Date
+  days      Int
+  headcount Int           @default(1)
+  dailyRate Decimal       @map("daily_rate") @db.Decimal(10, 2)
+  totalCost Decimal       @map("total_cost") @db.Decimal(10, 2)
+  status    BookingStatus @default(PENDING)
+  notes     String?
+  guideNote String?       @map("guide_note")
+  adminNote String?       @map("admin_note")
+  createdAt DateTime      @default(now()) @map("created_at")
+  updatedAt DateTime      @updatedAt @map("updated_at")
+
+  guide   GuideProfile @relation(fields: [guideId], references: [id], onDelete: Cascade)
+  tourist User         @relation("TouristBookings", fields: [touristId], references: [id], onDelete: Cascade)
+  trip    Trip?        @relation(fields: [tripId], references: [id], onDelete: SetNull)
+  city    City         @relation(fields: [cityId], references: [id])
+
+  @@index([guideId, startDate])
+  @@index([touristId])
+  @@index([status])
+  @@map("guide_bookings")
 }
 
 model Trip {
@@ -38,8 +121,9 @@ model Trip {
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
 
-  user  User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  stops TripStop[]
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  stops         TripStop[]
+  guideBookings GuideBooking[]
 
   @@index([userId])
   @@map("trips")
@@ -56,8 +140,10 @@ model City {
   latitude   Float?
   longitude  Float?
 
-  activities Activity[]
-  tripStops  TripStop[]
+  activities    Activity[]
+  tripStops     TripStop[]
+  guides        GuideProfile[]
+  guideBookings GuideBooking[]
 
   @@unique([name, country])
   @@index([country])
@@ -66,16 +152,16 @@ model City {
 
 /// The join that makes this a real relational app: one trip -> many city stays.
 model TripStop {
-  id                 Int      @id @default(autoincrement())
-  tripId             Int      @map("trip_id")
-  cityId             Int      @map("city_id")
-  arrivalDate        DateTime @map("arrival_date") @db.Date
-  departureDate      DateTime @map("departure_date") @db.Date
-  sortOrder          Int      @map("sort_order") // gaps of 10 so inserts don't renumber
-  transportCost      Decimal  @default(0) @map("transport_cost") @db.Decimal(10, 2)
-  accommodationCost  Decimal  @default(0) @map("accommodation_cost") @db.Decimal(10, 2)
-  notes              String?
-  createdAt          DateTime @default(now()) @map("created_at")
+  id                Int      @id @default(autoincrement())
+  tripId            Int      @map("trip_id")
+  cityId            Int      @map("city_id")
+  arrivalDate       DateTime @map("arrival_date") @db.Date
+  departureDate     DateTime @map("departure_date") @db.Date
+  sortOrder         Int      @map("sort_order") // gaps of 10 so inserts don't renumber
+  transportCost     Decimal  @default(0) @map("transport_cost") @db.Decimal(10, 2)
+  accommodationCost Decimal  @default(0) @map("accommodation_cost") @db.Decimal(10, 2)
+  notes             String?
+  createdAt         DateTime @default(now()) @map("created_at")
 
   trip       Trip           @relation(fields: [tripId], references: [id], onDelete: Cascade)
   city       City           @relation(fields: [cityId], references: [id])
@@ -96,7 +182,7 @@ model Activity {
   durationMinutes Int     @map("duration_minutes")
   imageUrl        String? @map("image_url")
 
-  city     City           @relation(fields: [cityId], references: [id], onDelete: Cascade)
+  city      City           @relation(fields: [cityId], references: [id], onDelete: Cascade)
   stopLinks StopActivity[]
 
   @@index([cityId])

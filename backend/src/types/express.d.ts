@@ -1,10 +1,12 @@
-import type { User } from '@prisma/client';
+import type { UserRole } from '@prisma/client';
 
 export interface AuthenticatedUser {
   id: number;
   email: string;
   name: string;
   photoUrl: string | null;
+  phone: string | null;
+  role: UserRole;
   createdAt: Date;
 }
 

@@ -1,6 +1,10 @@
 import { api } from "./client";
 import type {
   ActivityListResponse,
+  AdminStats,
+  AdminUpdateBookingInput,
+  AdminUser,
+  AdminUserListResponse,
   AddStopActivityInput,
   AiFoodSuggestionsInput,
   AiHomeChatResponse,
@@ -10,21 +14,31 @@ import type {
   AiRecommendResponse,
   AiScheduleResponse,
   AuthResponse,
+  BookingListResponse,
+  BookingStatus,
   CatalogueSort,
   CityListResponse,
   CreateStopInput,
   CreateTripInput,
   DashboardResponse,
+  CreateBookingInput,
   FoodSuggestionsResponse,
+  GuideAssignmentsResponse,
+  GuideDetailResponse,
+  GuideListResponse,
+  GuideProfileInput,
   HotelListResponse,
   PublicTripResponse,
   SerializedActivity,
+  SerializedBooking,
   SerializedCity,
+  SerializedGuide,
   SerializedStop,
   SerializedStopActivity,
   SerializedTrip,
   SerializedUser,
   ShareResponse,
+  SignupInput,
   TripBudget,
   TripDeepResponse,
   TripListResponse,
@@ -33,19 +47,84 @@ import type {
   UpdateStopActivityInput,
   UpdateStopInput,
   UpdateTripInput,
+  UserRole,
   WeatherForecast,
 } from "@/lib/types";
 
 export { ApiError } from "./client";
 
 export const auth = {
-  signup: (data: { name: string; email: string; password: string; photoUrl?: string | null }) =>
-    api.post<AuthResponse>("/auth/signup", data),
+  signup: (data: SignupInput) => api.post<AuthResponse>("/auth/signup", data),
   login: (data: { email: string; password: string }) => api.post<AuthResponse>("/auth/login", data),
   logout: () => api.post<{ ok: true }>("/auth/logout"),
   me: () => api.get<{ user: SerializedUser }>("/auth/me"),
-  updateProfile: (data: { name?: string; photoUrl?: string | null }) =>
+  updateProfile: (data: { name?: string; photoUrl?: string | null; phone?: string | null }) =>
     api.patch<{ user: SerializedUser }>("/auth/me", data),
+};
+
+/** The guide directory, plus the workspace a signed-in guide sees of their own work. */
+export const guides = {
+  list: (params?: {
+    q?: string;
+    cityId?: number;
+    city?: string;
+    country?: string;
+    language?: string;
+    maxRate?: number;
+    startDate?: string;
+    endDate?: string;
+    sort?: "rating" | "price" | "experience";
+    limit?: number;
+    offset?: number;
+  }) => api.get<GuideListResponse>("/guides", params),
+  get: (id: number) => api.get<GuideDetailResponse>(`/guides/${id}`),
+  me: () => api.get<{ guide: SerializedGuide }>("/guides/me"),
+  updateMe: (data: Partial<GuideProfileInput> & { isActive?: boolean }) =>
+    api.patch<{ guide: SerializedGuide }>("/guides/me", data),
+  assignments: (params?: { status?: BookingStatus; scope?: "all" | "upcoming" | "past"; limit?: number }) =>
+    api.get<GuideAssignmentsResponse>("/guides/me/assignments", params),
+  respond: (bookingId: number, data: { status: "CONFIRMED" | "DECLINED" | "COMPLETED"; guideNote?: string | null }) =>
+    api.patch<{ booking: SerializedBooking }>(`/guides/me/assignments/${bookingId}`, data),
+};
+
+/** A traveller's side of the same relationship: who they hired, and when. */
+export const bookings = {
+  list: (params?: { status?: BookingStatus; scope?: "all" | "upcoming" | "past"; limit?: number }) =>
+    api.get<BookingListResponse>("/bookings", params),
+  create: (data: CreateBookingInput) => api.post<{ booking: SerializedBooking }>("/bookings", data),
+  get: (id: number) => api.get<{ booking: SerializedBooking }>(`/bookings/${id}`),
+  cancel: (id: number, notes?: string) =>
+    api.post<{ booking: SerializedBooking }>(`/bookings/${id}/cancel`, { notes }),
+};
+
+/** Admin-only. Every call here 403s for anyone else. */
+export const admin = {
+  stats: () => api.get<{ stats: AdminStats }>("/admin/stats"),
+  users: (params?: { q?: string; role?: UserRole; limit?: number; offset?: number }) =>
+    api.get<AdminUserListResponse>("/admin/users", params),
+  setUserRole: (userId: number, data: { role: UserRole; cityId?: number; dailyRate?: number }) =>
+    api.patch<{ user: AdminUser }>(`/admin/users/${userId}/role`, data),
+  guides: (params?: {
+    q?: string;
+    cityId?: number;
+    status?: "all" | "active" | "inactive" | "unverified";
+    limit?: number;
+  }) => api.get<GuideListResponse>("/admin/guides", params),
+  updateGuide: (
+    guideId: number,
+    data: { isActive?: boolean; isVerified?: boolean; cityId?: number; dailyRate?: number },
+  ) => api.patch<{ guide: SerializedGuide }>(`/admin/guides/${guideId}`, data),
+  bookings: (params?: {
+    q?: string;
+    status?: BookingStatus;
+    guideId?: number;
+    cityId?: number;
+    limit?: number;
+  }) => api.get<BookingListResponse>("/admin/bookings", params),
+  updateBooking: (bookingId: number, data: AdminUpdateBookingInput) =>
+    api.patch<{ booking: SerializedBooking }>(`/admin/bookings/${bookingId}`, data),
+  deleteBooking: (bookingId: number) =>
+    api.delete<{ ok: true; deletedId: number }>(`/admin/bookings/${bookingId}`),
 };
 
 export const dashboard = {
