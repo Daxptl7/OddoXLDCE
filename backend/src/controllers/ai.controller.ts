@@ -132,17 +132,17 @@ function fallbackPlan(input: AiPlanInput, pickedCities: CandidateCity[], candida
   };
 }
 
-async function callOpenAIPlan(input: AiPlanInput, cities: CandidateCity[], activities: CandidateActivity): Promise<GeneratedPlan | null> {
-  if (!env.openaiApiKey) return null;
+async function callGroqPlan(input: AiPlanInput, cities: CandidateCity[], activities: CandidateActivity): Promise<GeneratedPlan | null> {
+  if (!env.groqApiKey) return null;
 
-  const response = await fetch('https://api.openai.com/v1/responses', {
+  const response = await fetch('https://api.groq.com/openai/v1/responses', {
     method: 'POST',
     headers: {
-      Authorization: `Bearer ${env.openaiApiKey}`,
+      Authorization: `Bearer ${env.groqApiKey}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: env.openaiModel,
+      model: env.groqModel,
       input: [
         {
           role: 'system',
@@ -191,7 +191,7 @@ async function callOpenAIPlan(input: AiPlanInput, cities: CandidateCity[], activ
   });
 
   if (!response.ok) {
-    console.warn('OpenAI plan request failed', response.status, await response.text().catch(() => ''));
+    console.warn('Groq plan request failed', response.status, await response.text().catch(() => ''));
     return null;
   }
 
@@ -233,7 +233,7 @@ function hydrateGeneratedPlan(input: AiPlanInput, generated: GeneratedPlan, citi
   if (stops.length === 0) return null;
 
   return {
-    source: 'openai' as const,
+    source: 'groq' as const,
     title: generated.title,
     summary: generated.summary,
     targetBudget: input.budget ?? null,
@@ -247,16 +247,10 @@ export const planTrip = asyncHandler(async (req: Request, res: Response) => {
   const input = req.body as AiPlanInput;
   const cities = await findCandidateCities(input.destinations);
   const activities = await findCandidateActivities(cities.map((city) => city.id), input.interests, input.budget);
-  const generated = await callOpenAIPlan(input, cities, activities);
+  const generated = await callGroqPlan(input, cities, activities);
   const llmPlan = generated ? hydrateGeneratedPlan(input, generated, cities, activities) : null;
 
   res.json(llmPlan ?? fallbackPlan(input, cities, activities));
-});
-    targetBudget: budget ?? null,
-    interests,
-    stops,
-    estimatedTotal: Math.round(stops.reduce((sum, stop) => sum + stop.estimatedCost, 0) * 100) / 100,
-  });
 });
 
 export const recommendActivities = asyncHandler(async (req: Request, res: Response) => {

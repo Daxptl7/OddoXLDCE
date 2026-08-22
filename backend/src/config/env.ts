@@ -18,8 +18,8 @@ export interface Env {
   jwtExpiresIn: string;
   corsOrigins: string[];
   publicAppUrl: string;
-  openaiApiKey?: string;
-  openaiModel: string;
+  groqApiKey?: string;
+  groqModel: string;
   readonly isProd: boolean;
 }
 
@@ -34,8 +34,8 @@ export const env: Env = {
     .map((origin) => origin.trim())
     .filter(Boolean),
   publicAppUrl: process.env.PUBLIC_APP_URL ?? 'http://localhost:5173',
-  openaiApiKey: process.env.OPENAI_API_KEY,
-  openaiModel: process.env.OPENAI_MODEL ?? 'gpt-5.6-luna',
+  groqApiKey: process.env.GROQ_API_KEY,
+  groqModel: process.env.GROQ_MODEL ?? 'openai/gpt-oss-20b',
   get isProd(): boolean {
     return this.nodeEnv === 'production';
   },
