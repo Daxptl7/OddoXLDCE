@@ -10,15 +10,15 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const variantClasses: Record<Variant, string> = {
-  primary: "bg-primary text-primary-foreground hover:bg-blue-700 disabled:bg-blue-300",
-  secondary: "bg-white text-foreground border border-border hover:bg-slate-50 disabled:opacity-50",
-  ghost: "bg-transparent text-foreground hover:bg-slate-100 disabled:opacity-50",
-  danger: "bg-danger text-white hover:bg-red-700 disabled:bg-red-300",
+  primary: "bg-primary text-primary-foreground shadow-sm hover:bg-[#e31c5f] disabled:bg-[#ffb3c1]",
+  secondary: "border border-border bg-white text-foreground hover:border-foreground hover:bg-[#f7f7f7] disabled:opacity-50",
+  ghost: "bg-transparent text-foreground hover:bg-[#f7f7f7] disabled:opacity-50",
+  danger: "bg-danger text-white hover:bg-[#a12a12] disabled:bg-red-300",
 };
 
 const sizeClasses: Record<Size, string> = {
-  sm: "px-3 py-1.5 text-sm rounded-md",
-  md: "px-4 py-2 text-sm rounded-lg",
+  sm: "px-3 py-1.5 text-sm rounded-full",
+  md: "px-5 py-2.5 text-sm rounded-full",
 };
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
@@ -29,7 +29,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
     <button
       ref={ref}
       className={clsx(
-        "inline-flex items-center justify-center gap-2 font-medium transition-colors disabled:cursor-not-allowed",
+        "inline-flex items-center justify-center gap-2 font-semibold transition-colors disabled:cursor-not-allowed",
         variantClasses[variant],
         sizeClasses[size],
         className,

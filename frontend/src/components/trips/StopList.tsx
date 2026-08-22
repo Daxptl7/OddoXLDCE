@@ -25,6 +25,7 @@ import { ActivityPicker } from "./ActivityPicker";
 import { useDeleteStop, useReorderStops } from "@/hooks/useStops";
 import { formatDateRange, formatMoney } from "@/lib/format";
 import type { SerializedStop } from "@/lib/types";
+import { CompassIcon, EditIcon, GripIcon, MapPinIcon, PlusIcon, TrashIcon, WalletIcon } from "@/components/ui/Icons";
 
 export function StopList({ tripId, stops }: { tripId: number; stops: SerializedStop[] }) {
   const [addOpen, setAddOpen] = useState(false);
@@ -49,9 +50,13 @@ export function StopList({ tripId, stops }: { tripId: number; stops: SerializedS
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-foreground">Stops</h2>
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <h2 className="text-xl font-bold text-foreground">Stops</h2>
+          <p className="text-sm text-muted">Drag cities into the order you want to travel.</p>
+        </div>
         <Button size="sm" onClick={() => setAddOpen(true)}>
+          <PlusIcon className="h-4 w-4" />
           Add stop
         </Button>
       </div>
@@ -62,6 +67,7 @@ export function StopList({ tripId, stops }: { tripId: number; stops: SerializedS
           description="Add a city to start building your itinerary."
           action={
             <Button size="sm" onClick={() => setAddOpen(true)}>
+              <PlusIcon className="h-4 w-4" />
               Add stop
             </Button>
           }
@@ -116,58 +122,95 @@ function SortableStopCard({
   };
 
   return (
-    <Card ref={setNodeRef} style={style} className="p-4">
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex items-start gap-3">
-          <button
-            {...attributes}
-            {...listeners}
-            aria-label="Drag to reorder"
-            className="mt-1 cursor-grab touch-none rounded p-1 text-muted hover:bg-slate-100 active:cursor-grabbing"
-          >
-            ⠿
-          </button>
-          <div>
-            <p className="font-medium text-foreground">
-              {stop.city?.name}, <span className="text-muted">{stop.city?.country}</span>
-            </p>
-            <p className="text-sm text-muted">
-              {formatDateRange(stop.arrivalDate, stop.departureDate)} · {stop.nights} {stop.nights === 1 ? "night" : "nights"}
-            </p>
-            {stop.notes ? <p className="mt-1 text-sm text-muted">{stop.notes}</p> : null}
+    <Card ref={setNodeRef} style={style} className="overflow-hidden p-0">
+      <div className="grid md:grid-cols-[180px_1fr]">
+        <div
+          className="min-h-40 bg-[#dddddd]"
+          style={
+            stop.city?.imageUrl
+              ? { backgroundImage: `url(${stop.city.imageUrl})`, backgroundSize: "cover", backgroundPosition: "center" }
+              : undefined
+          }
+        >
+          {!stop.city?.imageUrl ? (
+            <div className="flex h-full min-h-40 items-center justify-center bg-gradient-to-br from-rose-50 via-white to-teal-50 text-primary">
+              <MapPinIcon className="h-9 w-9" />
+            </div>
+          ) : null}
+        </div>
+
+        <div className="p-4">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-start gap-3">
+              <button
+                {...attributes}
+                {...listeners}
+                aria-label="Drag to reorder"
+                className="mt-1 cursor-grab touch-none rounded-full p-2 text-muted hover:bg-[#f7f7f7] hover:text-foreground active:cursor-grabbing"
+              >
+                <GripIcon className="h-5 w-5" />
+              </button>
+              <div>
+                <p className="font-bold text-foreground">
+                  {stop.city?.name}, <span className="font-semibold text-muted">{stop.city?.country}</span>
+                </p>
+                <p className="mt-1 inline-flex items-center gap-1.5 text-sm text-muted">
+                  <CompassIcon className="h-4 w-4 text-primary" />
+                  {formatDateRange(stop.arrivalDate, stop.departureDate)} · {stop.nights} {stop.nights === 1 ? "night" : "nights"}
+                </p>
+                {stop.notes ? <p className="mt-2 text-sm text-muted">{stop.notes}</p> : null}
+              </div>
+            </div>
+            <div className="flex items-center gap-1">
+              <Button size="sm" variant="ghost" onClick={onEdit} aria-label="Edit stop">
+                <EditIcon className="h-4 w-4" />
+                <span className="hidden sm:inline">Edit</span>
+              </Button>
+              <Button size="sm" variant="ghost" onClick={onDelete} aria-label="Delete stop">
+                <TrashIcon className="h-4 w-4" />
+                <span className="hidden sm:inline">Delete</span>
+              </Button>
+            </div>
+          </div>
+
+          <div className="mt-4 grid grid-cols-2 gap-2 text-xs text-muted sm:grid-cols-4">
+            <CostPill label="Transport" value={formatMoney(stop.transportCost)} />
+            <CostPill label="Stay" value={formatMoney(stop.accommodationCost)} />
+            <CostPill label="Activities" value={formatMoney(stop.activityCost)} />
+            <CostPill label="Total" value={formatMoney(stop.stopTotal)} strong />
+          </div>
+
+          <div className="mt-4 flex flex-col gap-2">
+            {stop.activities.length > 0 ? (
+              <ul className="flex flex-col gap-2">
+                {stop.activities.map((link) => (
+                  <StopActivityRow key={link.id} tripId={tripId} link={link} />
+                ))}
+              </ul>
+            ) : (
+              <p className="rounded-2xl border border-dashed border-border bg-[#f7f7f7] px-4 py-3 text-sm text-muted">
+                No activities planned yet.
+              </p>
+            )}
+            <Button size="sm" variant="secondary" className="self-start" onClick={onAddActivity}>
+              <PlusIcon className="h-4 w-4" />
+              Add activity
+            </Button>
           </div>
         </div>
-        <div className="flex items-center gap-1">
-          <Button size="sm" variant="ghost" onClick={onEdit}>
-            Edit
-          </Button>
-          <Button size="sm" variant="ghost" onClick={onDelete}>
-            Delete
-          </Button>
-        </div>
-      </div>
-
-      <div className="mt-3 flex items-center gap-4 text-xs text-muted">
-        <span>Transport {formatMoney(stop.transportCost)}</span>
-        <span>Stay {formatMoney(stop.accommodationCost)}</span>
-        <span>Activities {formatMoney(stop.activityCost)}</span>
-        <span className="font-medium text-foreground">Total {formatMoney(stop.stopTotal)}</span>
-      </div>
-
-      <div className="mt-3 flex flex-col gap-2">
-        {stop.activities.length > 0 ? (
-          <ul className="flex flex-col gap-2">
-            {stop.activities.map((link) => (
-              <StopActivityRow key={link.id} tripId={tripId} link={link} />
-            ))}
-          </ul>
-        ) : (
-          <p className="text-sm text-muted">No activities planned yet.</p>
-        )}
-        <Button size="sm" variant="secondary" className="self-start" onClick={onAddActivity}>
-          Add activity
-        </Button>
       </div>
     </Card>
+  );
+}
+
+function CostPill({ label, value, strong = false }: { label: string; value: string; strong?: boolean }) {
+  return (
+    <div className="rounded-2xl bg-[#f7f7f7] px-3 py-2">
+      <p className="inline-flex items-center gap-1 text-[11px] font-semibold uppercase text-muted">
+        {strong ? <WalletIcon className="h-3.5 w-3.5 text-primary" /> : null}
+        {label}
+      </p>
+      <p className={strong ? "font-bold text-foreground" : "font-semibold text-foreground"}>{value}</p>
+    </div>
   );
 }

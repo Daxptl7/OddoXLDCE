@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { formatDate, formatMoney } from "@/lib/format";
 import type { Itinerary } from "@/lib/types";
+import { CalendarIcon, ClockIcon, WalletIcon } from "@/components/ui/Icons";
 
 export function ItineraryDayList({ itinerary }: { itinerary: Itinerary }) {
   if (itinerary.days.length === 0) {
@@ -14,24 +15,41 @@ export function ItineraryDayList({ itinerary }: { itinerary: Itinerary }) {
       {itinerary.days.map((day) => (
         <Card key={day.date} className="p-4">
           <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs font-medium uppercase tracking-wide text-muted">Day {day.dayNumber}</p>
-              <p className="font-medium text-foreground">
+            <div className="flex items-start gap-3">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-rose-50 text-primary">
+                <CalendarIcon className="h-5 w-5" />
+              </span>
+              <div>
+              <p className="text-xs font-bold uppercase text-muted">Day {day.dayNumber}</p>
+              <p className="font-bold text-foreground">
                 {formatDate(day.date)}
                 {day.city ? ` · ${day.city}, ${day.country}` : ""}
               </p>
+              </div>
             </div>
-            {day.dayCost > 0 ? <span className="text-sm font-medium text-foreground">{formatMoney(day.dayCost)}</span> : null}
+            {day.dayCost > 0 ? (
+              <span className="inline-flex items-center gap-1 rounded-full bg-[#f7f7f7] px-3 py-1 text-sm font-bold text-foreground">
+                <WalletIcon className="h-4 w-4 text-primary" />
+                {formatMoney(day.dayCost)}
+              </span>
+            ) : null}
           </div>
 
           {day.isEmpty ? (
-            <p className="mt-2 text-sm text-muted">{day.city ? "No activities planned yet." : "No stop scheduled."}</p>
+            <p className="mt-3 rounded-2xl border border-dashed border-border bg-[#f7f7f7] px-4 py-3 text-sm text-muted">
+              {day.city ? "No activities planned yet." : "No stop scheduled."}
+            </p>
           ) : (
-            <ul className="mt-3 flex flex-col gap-1.5">
+            <ul className="mt-3 flex flex-col gap-2">
               {day.activities.map((activity) => (
-                <li key={activity.id} className="flex items-center justify-between text-sm">
-                  <span className="text-foreground">
-                    {activity.scheduledTime ? <span className="mr-2 text-muted">{activity.scheduledTime}</span> : null}
+                <li key={activity.id} className="flex items-center justify-between gap-3 rounded-2xl border border-border px-3 py-2 text-sm">
+                  <span className="min-w-0 text-foreground">
+                    {activity.scheduledTime ? (
+                      <span className="mr-2 inline-flex items-center gap-1 text-muted">
+                        <ClockIcon className="h-3.5 w-3.5" />
+                        {activity.scheduledTime}
+                      </span>
+                    ) : null}
                     {activity.activity?.name ?? "Activity"}
                     {activity.unscheduled ? (
                       <span className="ml-2">
@@ -39,7 +57,7 @@ export function ItineraryDayList({ itinerary }: { itinerary: Itinerary }) {
                       </span>
                     ) : null}
                   </span>
-                  <span className="text-muted">{formatMoney(activity.cost)}</span>
+                  <span className="shrink-0 text-muted">{formatMoney(activity.cost)}</span>
                 </li>
               ))}
             </ul>

@@ -3,11 +3,11 @@ import clsx from "clsx";
 type Tone = "neutral" | "success" | "warning" | "danger" | "info";
 
 const toneClasses: Record<Tone, string> = {
-  neutral: "bg-slate-100 text-slate-700",
-  success: "bg-green-100 text-green-700",
-  warning: "bg-amber-100 text-amber-700",
-  danger: "bg-red-100 text-red-700",
-  info: "bg-blue-100 text-blue-700",
+  neutral: "bg-[#f7f7f7] text-[#484848]",
+  success: "bg-emerald-50 text-emerald-700",
+  warning: "bg-amber-50 text-amber-800",
+  danger: "bg-red-50 text-red-700",
+  info: "bg-rose-50 text-primary",
 };
 
 export function Badge({ tone = "neutral", children }: { tone?: Tone; children: React.ReactNode }) {

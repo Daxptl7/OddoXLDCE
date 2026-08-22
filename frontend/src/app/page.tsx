@@ -1,58 +1,95 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { PublicNavbar } from "@/components/home/PublicNavbar";
 import { HeroScroller } from "@/components/home/HeroScroller";
 import { WorkflowSection } from "@/components/home/WorkflowSection";
+import {
+  CalendarIcon,
+  CompassIcon,
+  HomeIcon,
+  MapPinIcon,
+  SearchIcon,
+  SparklesIcon,
+  UsersIcon,
+  WalletIcon,
+} from "@/components/ui/Icons";
 
-const avatars = ["🧑‍🌾", "🧑‍🌾", "🧑‍🌾", "🧑‍🌾"];
+const categories = [
+  { label: "Homes", Icon: HomeIcon },
+  { label: "Experiences", Icon: SparklesIcon },
+  { label: "Culture", Icon: CompassIcon },
+  { label: "Budget", Icon: WalletIcon },
+  { label: "Calendar", Icon: CalendarIcon },
+];
 
 export default function HomePage() {
   return (
     <div className="flex flex-1 flex-col">
       <PublicNavbar />
 
-      <section className="relative flex h-screen min-h-[640px] w-full items-center overflow-hidden">
+      <section className="relative flex min-h-[calc(100svh-72px)] w-full items-center overflow-hidden pb-20 pt-28">
         <HeroScroller />
 
-        <div className="relative z-10 mx-auto w-full max-w-6xl px-6">
-          <h1 className="max-w-2xl text-4xl font-bold leading-tight text-white sm:text-6xl">
-            Plan Multi-City Trips, Effortlessly
+        <div className="relative z-10 mx-auto flex w-full max-w-6xl flex-col items-center px-4 text-center sm:px-6">
+          <h1 className="max-w-3xl text-4xl font-bold leading-tight text-white sm:text-6xl">
+            GlobeTrotter
           </h1>
-          <p className="mt-6 max-w-xl text-lg text-white/90">
-            Build a day-by-day itinerary across every city on your trip, attach activities, and watch the budget
-            derive itself as you go.
+          <p className="mt-4 max-w-2xl text-base font-medium text-white/95 sm:text-xl">
+            Search cities, build a multi-stop itinerary, schedule activities, and keep the whole trip inside budget.
           </p>
-          <div className="mt-8 flex items-center gap-6 text-white">
-            <Link
-              href="/signup"
-              className="rounded-md bg-white px-6 py-3 text-sm font-semibold text-slate-900 transition-colors hover:bg-white/90"
-            >
-              Get Started
-            </Link>
-            <Link href="/login" className="text-sm font-medium underline-offset-4 hover:underline">
-              Login
-            </Link>
-          </div>
-        </div>
 
-        <div className="absolute bottom-8 left-6 z-10 flex items-center gap-3 text-white sm:left-10">
-          <div className="flex -space-x-2">
-            {avatars.map((emoji, index) => (
-              <span
-                key={index}
-                className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-white/40 bg-slate-700 text-sm"
+          <div className="mt-8 w-full max-w-4xl rounded-full bg-white p-2 shadow-2xl max-md:rounded-3xl">
+            <div className="grid grid-cols-1 items-center divide-y divide-border md:grid-cols-[1.3fr_1fr_1fr_auto] md:divide-x md:divide-y-0">
+              <SearchCell icon={<MapPinIcon className="h-5 w-5" />} label="Where" value="Search destinations" />
+              <SearchCell icon={<CalendarIcon className="h-5 w-5" />} label="When" value="Add dates" />
+              <SearchCell icon={<UsersIcon className="h-5 w-5" />} label="Who" value="Travel style" />
+              <Link
+                href="/signup"
+                className="m-1 inline-flex h-12 items-center justify-center gap-2 rounded-full bg-primary px-6 text-sm font-bold text-white transition-colors hover:bg-[#e31c5f] md:h-14"
               >
-                {emoji}
-              </span>
+                <SearchIcon className="h-5 w-5" />
+                Start
+              </Link>
+            </div>
+          </div>
+
+          <div className="scrollbar-hide mt-7 flex w-full max-w-3xl gap-3 overflow-x-auto px-1 py-1">
+            {categories.map(({ label, Icon }) => (
+              <Link
+                key={label}
+                href="/signup"
+                className="flex min-w-[108px] flex-col items-center gap-2 rounded-2xl border border-white/35 bg-white/90 px-4 py-3 text-sm font-semibold text-[#222222] shadow-sm backdrop-blur hover:bg-white"
+              >
+                <Icon className="h-6 w-6" />
+                {label}
+              </Link>
             ))}
           </div>
-          <div className="text-sm">
-            <p className="font-medium">Over 2,500 travelers have trusted us</p>
-            <p className="text-white/80">⭐ 4.9</p>
+
+          <div className="mt-8 flex items-center gap-5 text-white">
+            <Link href="/signup" className="rounded-full bg-white px-6 py-3 text-sm font-bold text-[#222222] transition-colors hover:bg-white/90">
+              Get started
+            </Link>
+            <Link href="/login" className="text-sm font-bold underline-offset-4 hover:underline">
+              Login
+            </Link>
           </div>
         </div>
       </section>
 
       <WorkflowSection />
     </div>
+  );
+}
+
+function SearchCell({ icon, label, value }: { icon: ReactNode; label: string; value: string }) {
+  return (
+    <Link href="/signup" className="flex min-h-16 items-center gap-3 rounded-full px-5 py-3 text-left hover:bg-[#f7f7f7] max-md:rounded-2xl">
+      <span className="text-primary">{icon}</span>
+      <span>
+        <span className="block text-xs font-bold text-[#222222]">{label}</span>
+        <span className="block text-sm text-muted">{value}</span>
+      </span>
+    </Link>
   );
 }

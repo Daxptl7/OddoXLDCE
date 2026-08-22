@@ -2,6 +2,10 @@ import { api } from "./client";
 import type {
   ActivityListResponse,
   AddStopActivityInput,
+  AiOptimizeResponse,
+  AiPlanInput,
+  AiPlanResponse,
+  AiRecommendResponse,
   AuthResponse,
   CatalogueSort,
   CityListResponse,
@@ -93,4 +97,12 @@ export const catalogue = {
 export const publicTrips = {
   /** No auth. The share page calls this and nothing else. */
   get: (slug: string) => api.get<PublicTripResponse>(`/public/${slug}`),
+  copy: (slug: string) => api.post<{ trip: SerializedTrip }>(`/public/${slug}/copy`),
+};
+
+export const ai = {
+  plan: (data: AiPlanInput) => api.post<AiPlanResponse>("/ai/plan", data),
+  recommend: (tripId: number, limit = 3) => api.post<AiRecommendResponse>("/ai/recommend", { tripId, limit }),
+  optimize: (tripId: number, targetBudget: number) =>
+    api.post<AiOptimizeResponse>("/ai/optimize", { tripId, targetBudget }),
 };

@@ -17,9 +17,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   if (isLoading || !user) return <PageSpinner />;
 
   return (
-    <div className="flex min-h-full flex-1 flex-col">
+    <div className="flex min-h-full flex-1 flex-col bg-background">
       <Navbar />
-      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6">{children}</main>
+      <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-8 sm:px-6">{children}</main>
     </div>
   );
 }

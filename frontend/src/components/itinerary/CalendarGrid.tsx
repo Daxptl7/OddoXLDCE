@@ -2,13 +2,14 @@ import clsx from "clsx";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { formatDateShort, formatMoney } from "@/lib/format";
 import type { Itinerary } from "@/lib/types";
+import { CalendarIcon, MapPinIcon, WalletIcon } from "@/components/ui/Icons";
 
 const cityPalette = [
-  "border-blue-200 bg-blue-50",
-  "border-green-200 bg-green-50",
+  "border-rose-200 bg-rose-50",
+  "border-teal-200 bg-teal-50",
   "border-amber-200 bg-amber-50",
-  "border-purple-200 bg-purple-50",
-  "border-pink-200 bg-pink-50",
+  "border-sky-200 bg-sky-50",
+  "border-lime-200 bg-lime-50",
 ];
 
 export function CalendarGrid({ itinerary }: { itinerary: Itinerary }) {
@@ -26,21 +27,32 @@ export function CalendarGrid({ itinerary }: { itinerary: Itinerary }) {
   }
 
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
       {itinerary.days.map((day) => (
         <div
           key={day.date}
           className={clsx(
-            "flex flex-col gap-1 rounded-lg border p-3",
-            day.city ? cityColors.get(day.city) : "border-border bg-slate-50",
+            "flex min-h-32 flex-col gap-2 rounded-2xl border p-3 shadow-sm",
+            day.city ? cityColors.get(day.city) : "border-border bg-white",
           )}
         >
-          <p className="text-xs font-medium uppercase tracking-wide text-muted">{formatDateShort(day.date)}</p>
-          <p className="text-sm font-medium text-foreground">{day.city ?? "No stop"}</p>
+          <p className="inline-flex items-center gap-1.5 text-xs font-bold uppercase text-muted">
+            <CalendarIcon className="h-3.5 w-3.5" />
+            {formatDateShort(day.date)}
+          </p>
+          <p className="inline-flex items-center gap-1.5 text-sm font-bold text-foreground">
+            <MapPinIcon className="h-4 w-4 text-primary" />
+            {day.city ?? "No stop"}
+          </p>
           <p className="text-xs text-muted">
             {day.activities.length} {day.activities.length === 1 ? "activity" : "activities"}
           </p>
-          {day.dayCost > 0 ? <p className="text-xs font-medium text-foreground">{formatMoney(day.dayCost)}</p> : null}
+          {day.dayCost > 0 ? (
+            <p className="mt-auto inline-flex items-center gap-1 text-xs font-bold text-foreground">
+              <WalletIcon className="h-3.5 w-3.5 text-primary" />
+              {formatMoney(day.dayCost)}
+            </p>
+          ) : null}
         </div>
       ))}
     </div>

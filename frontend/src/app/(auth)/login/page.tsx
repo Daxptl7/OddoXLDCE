@@ -43,7 +43,7 @@ function LoginForm() {
     setFormError(null);
     try {
       await login(values.email, values.password);
-      router.push(searchParams.get("redirect") ?? "/dashboard");
+      router.push(searchParams?.get("redirect") ?? "/dashboard");
     } catch (error) {
       setFormError(errorMessage(error, "Could not sign in"));
     }

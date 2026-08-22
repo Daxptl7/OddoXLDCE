@@ -22,8 +22,8 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
         ref={ref}
         id={id}
         className={clsx(
-          "w-full rounded-md border px-3 py-2 text-sm outline-none transition-colors",
-          "focus:border-primary focus:ring-1 focus:ring-primary",
+          "w-full rounded-xl border bg-white px-3.5 py-2.5 text-sm outline-none transition-colors",
+          "placeholder:text-[#8a8a8a] focus:border-foreground focus:ring-1 focus:ring-foreground",
           error ? "border-danger" : "border-border",
           className,
         )}
@@ -48,8 +48,8 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(function 
         ref={ref}
         id={id}
         className={clsx(
-          "w-full rounded-md border px-3 py-2 text-sm outline-none transition-colors",
-          "focus:border-primary focus:ring-1 focus:ring-primary",
+          "w-full rounded-xl border bg-white px-3.5 py-2.5 text-sm outline-none transition-colors",
+          "placeholder:text-[#8a8a8a] focus:border-foreground focus:ring-1 focus:ring-foreground",
           error ? "border-danger" : "border-border",
           className,
         )}
@@ -73,7 +73,7 @@ function Field({
   return (
     <div className="flex flex-col gap-1">
       {label ? (
-        <label htmlFor={htmlFor} className="text-sm font-medium text-foreground">
+        <label htmlFor={htmlFor} className="text-sm font-semibold text-foreground">
           {label}
         </label>
       ) : null}

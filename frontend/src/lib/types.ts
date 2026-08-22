@@ -197,6 +197,54 @@ export interface PublicTripResponse {
   readOnly: true;
 }
 
+export interface AiPlanStop {
+  city: SerializedCity;
+  suggestedDays: number;
+  estimatedCost: number;
+  activities: SerializedActivity[];
+  reason?: string;
+}
+
+export interface AiPlanResponse {
+  source: "groq" | "seeded-fallback";
+  title: string;
+  summary: string;
+  targetBudget: number | null;
+  interests: string[];
+  stops: AiPlanStop[];
+  estimatedTotal: number;
+}
+
+export interface AiRecommendationGroup {
+  stopId: number;
+  city: string;
+  reason: string;
+  activities: SerializedActivity[];
+}
+
+export interface AiRecommendResponse {
+  source: "groq" | "seeded-fallback";
+  recommendations: AiRecommendationGroup[];
+}
+
+export interface AiOptimizeAction {
+  stopActivityId: number;
+  label: string;
+  savings: number;
+  reason: string;
+}
+
+export interface AiOptimizeResponse {
+  source: "groq" | "seeded-fallback";
+  currentTotal: number;
+  targetBudget: number;
+  neededSavings: number;
+  status: "already_under_target" | "actionable" | "partial";
+  actions: AiOptimizeAction[];
+  expectedSavings: number;
+  reason: string;
+}
+
 export type TripScope = "all" | "upcoming" | "past";
 export type CatalogueSort = "popularity" | "name" | "cost" | "duration";
 
@@ -230,3 +278,11 @@ export interface AddStopActivityInput {
 }
 
 export type UpdateStopActivityInput = Partial<Omit<AddStopActivityInput, "activityId">>;
+
+export interface AiPlanInput {
+  destinations: string;
+  durationDays?: number;
+  budget?: number;
+  interests?: string[];
+  travelStyle?: string;
+}
