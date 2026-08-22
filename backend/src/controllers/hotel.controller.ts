@@ -25,7 +25,9 @@ export const listHotels = asyncHandler(async (req: Request, res: Response) => {
   }
 
   const radius = req.query.radius ? Number(req.query.radius) : 8000;
-  let hotels = await fetchHotelsFromOverpass(cityName, country, lat, lng, costIndex, radius);
+  const arrivalDate = req.query.arrivalDate ? String(req.query.arrivalDate) : undefined;
+  const departureDate = req.query.departureDate ? String(req.query.departureDate) : undefined;
+  let hotels = await fetchHotelsFromOverpass(cityName, country, lat, lng, costIndex, radius, arrivalDate, departureDate);
 
   // Search filter
   const search = req.query.q ? String(req.query.q).toLowerCase().trim() : null;

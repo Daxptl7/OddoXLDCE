@@ -4,9 +4,7 @@ import { useState } from "react";
 import { useHotels } from "@/hooks/useHotels";
 import { WeatherWidget } from "@/components/weather/WeatherWidget";
 import { FoodSuggestionsModal } from "@/components/food/FoodSuggestionsModal";
-import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
-import { Badge } from "@/components/ui/Badge";
 import { PageSpinner } from "@/components/ui/Spinner";
 import { formatMoney } from "@/lib/format";
 import {
@@ -14,22 +12,25 @@ import {
   BuildingIcon,
   MapPinIcon,
   SearchIcon,
-  SparklesIcon,
-  SunIcon,
   UtensilsIcon,
 } from "@/components/ui/Icons";
 import type { Hotel } from "@/lib/types";
 
 const POPULAR_DESTINATIONS = [
+  { id: 101, name: "Goa", country: "India" },
+  { id: 102, name: "Mumbai", country: "India" },
+  { id: 103, name: "Jaipur", country: "India" },
+  { id: 104, name: "Delhi", country: "India" },
+  { id: 105, name: "Ahmedabad", country: "India" },
+  { id: 106, name: "Udaipur", country: "India" },
+  { id: 107, name: "Manali", country: "India" },
   { id: 1, name: "Paris", country: "France" },
   { id: 2, name: "Rome", country: "Italy" },
   { id: 3, name: "Tokyo", country: "Japan" },
   { id: 4, name: "Bali", country: "Indonesia" },
   { id: 5, name: "New York", country: "United States" },
-  { id: 6, name: "Barcelona", country: "Spain" },
   { id: 7, name: "London", country: "United Kingdom" },
   { id: 10, name: "Dubai", country: "United Arab Emirates" },
-  { id: 12, name: "Amsterdam", country: "Netherlands" },
 ];
 
 const ITEMS_PER_PAGE = 6;
@@ -88,7 +89,7 @@ export function DashboardHotelExplorer() {
                 Explore Live Hotels & Stays
               </h2>
               <p className="text-xs text-muted sm:text-sm">
-                Real-time accommodation directory powered by Overpass & OpenStreetMap API
+                Real-time booking rates and accommodations powered by Booking.com & OpenStreetMap
               </p>
             </div>
           </div>
@@ -102,7 +103,7 @@ export function DashboardHotelExplorer() {
             />
           ) : null}
           <span className="rounded-full bg-emerald-50 border border-emerald-200 px-3 py-1 text-xs font-bold text-emerald-800">
-            ● Live API Connected
+            ● Booking API Active
           </span>
         </div>
       </div>
@@ -121,7 +122,7 @@ export function DashboardHotelExplorer() {
                 type="text"
                 value={customCitySearch}
                 onChange={(e) => setCustomCitySearch(e.target.value)}
-                placeholder="Explore any other city..."
+                placeholder="Search any Indian or global city..."
                 className="rounded-full border border-border bg-[#f7f7f7] pl-8 pr-3 py-1 text-xs text-foreground placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-primary"
               />
             </div>
@@ -139,7 +140,7 @@ export function DashboardHotelExplorer() {
             const isSelected = selectedCity.name.toLowerCase() === city.name.toLowerCase();
             return (
               <button
-                key={city.id}
+                key={city.name}
                 type="button"
                 onClick={() => handleCityChange(city)}
                 className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-bold transition-all ${
@@ -199,13 +200,15 @@ export function DashboardHotelExplorer() {
         <div className="py-16">
           <PageSpinner />
           <p className="mt-3 text-center text-xs font-medium text-muted">
-            Fetching live accommodations for {selectedCity.name} via Overpass API...
+            Fetching real-time hotel listings for {selectedCity.name}...
           </p>
         </div>
       ) : currentHotels.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-border p-10 text-center">
-          <p className="text-sm font-bold text-foreground">No hotels found matching criteria</p>
-          <p className="mt-1 text-xs text-muted">Try clearing the search filter or star rating.</p>
+        <div className="rounded-2xl border border-dashed border-border p-12 text-center bg-[#fafafa]">
+          <p className="text-base font-bold text-foreground">No hotel listings found for {selectedCity.name}</p>
+          <p className="mt-1.5 text-xs text-muted max-w-md mx-auto leading-relaxed">
+            There are currently no active hotel or accommodation listings returned from the live API for this place. Please choose another destination from the quick switcher or search a different city.
+          </p>
         </div>
       ) : (
         <>
@@ -221,77 +224,111 @@ export function DashboardHotelExplorer() {
             <p className="text-[11px]">Page {currentPage} of {totalPages}</p>
           </div>
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {currentHotels.map((hotel) => (
               <div
                 key={hotel.id}
-                className="flex flex-col justify-between rounded-2xl border border-border bg-white p-4 shadow-sm transition-all hover:border-primary/50 hover:shadow-md"
+                className="group flex flex-col justify-between overflow-hidden rounded-3xl border border-border bg-white shadow-sm transition-all hover:border-primary/50 hover:shadow-xl"
               >
                 <div>
-                  <div className="flex items-start justify-between gap-2">
-                    <h3 className="text-sm font-bold text-foreground leading-tight line-clamp-1">
-                      {hotel.name}
-                    </h3>
-                    {hotel.stars ? (
-                      <span className="shrink-0 rounded-full bg-amber-50 border border-amber-200 px-2 py-0.5 text-[10px] font-bold text-amber-800">
-                        {"★".repeat(hotel.stars)}
-                      </span>
-                    ) : null}
+                  {/* Hotel Photo Banner */}
+                  <div
+                    className="relative h-44 w-full bg-slate-100 bg-cover bg-center transition-transform duration-300 group-hover:scale-[1.02]"
+                    style={{
+                      backgroundImage: `url(${hotel.photoUrl || `https://picsum.photos/seed/${encodeURIComponent(hotel.name)}/800/600`})`,
+                    }}
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                    
+                    {/* Rating badge */}
+                    <div className="absolute left-3 top-3 flex items-center gap-1.5">
+                      {hotel.rating ? (
+                        <span className="rounded-full bg-primary/95 px-2.5 py-0.5 text-xs font-bold text-white shadow-md backdrop-blur">
+                          ⭐ {hotel.rating} / 10
+                        </span>
+                      ) : hotel.stars ? (
+                        <span className="rounded-full bg-amber-400 px-2.5 py-0.5 text-xs font-bold text-black shadow-md">
+                          {"★".repeat(hotel.stars)}
+                        </span>
+                      ) : null}
+                    </div>
+
+                    <div className="absolute bottom-3 left-3 right-3 text-white">
+                      <p className="text-[11px] font-semibold text-white/90 truncate">
+                        📍 {hotel.distanceKm} km from center
+                      </p>
+                    </div>
                   </div>
 
-                  <p className="mt-1 text-xs text-muted line-clamp-1">{hotel.address}</p>
-                  <p className="mt-0.5 text-[11px] font-semibold text-primary">
-                    📍 {hotel.distanceKm} km from center
-                  </p>
+                  {/* Hotel Details */}
+                  <div className="p-4">
+                    <div className="flex items-start justify-between gap-2">
+                      <h3 className="text-base font-bold text-foreground leading-tight line-clamp-1">
+                        {hotel.name}
+                      </h3>
+                    </div>
 
-                  <div className="mt-3 flex flex-wrap gap-1">
-                    {hotel.amenities.slice(0, 3).map((amenity, aIdx) => (
-                      <span
-                        key={aIdx}
-                        className="rounded-md bg-[#f4f4f4] px-1.5 py-0.5 text-[10px] font-medium text-slate-700"
-                      >
-                        {amenity}
-                      </span>
-                    ))}
-                    {hotel.amenities.length > 3 ? (
-                      <span className="rounded-md bg-[#f4f4f4] px-1.5 py-0.5 text-[10px] font-medium text-muted">
-                        +{hotel.amenities.length - 3} more
-                      </span>
-                    ) : null}
+                    <p className="mt-1 text-xs text-muted line-clamp-2 leading-relaxed">
+                      {hotel.address}
+                    </p>
+
+                    {/* Amenities tags */}
+                    <div className="mt-3 flex flex-wrap gap-1">
+                      {hotel.amenities.slice(0, 3).map((amenity, aIdx) => (
+                        <span
+                          key={aIdx}
+                          className="rounded-lg bg-[#f4f4f4] px-2 py-0.5 text-[10px] font-medium text-slate-700"
+                        >
+                          {amenity}
+                        </span>
+                      ))}
+                      {hotel.amenities.length > 3 ? (
+                        <span className="rounded-lg bg-[#f4f4f4] px-2 py-0.5 text-[10px] font-medium text-muted">
+                          +{hotel.amenities.length - 3} more
+                        </span>
+                      ) : null}
+                    </div>
                   </div>
                 </div>
 
-                <div className="mt-4 border-t border-border/70 pt-3">
+                {/* Pricing and Book Now action button */}
+                <div className="border-t border-border/70 bg-[#fafafa] p-4">
                   <div className="flex items-baseline justify-between">
                     <div>
-                      <span className="text-sm font-bold text-foreground">
+                      <p className="text-xs text-muted font-medium">Starting from</p>
+                      <p className="text-lg font-extrabold text-foreground">
                         {formatMoney(hotel.estimatedPricePerNight)}
-                      </span>
-                      <span className="text-[11px] text-muted"> / night</span>
+                        <span className="text-xs font-normal text-muted"> / night</span>
+                      </p>
                     </div>
 
-                    {hotel.website ? (
-                      <a
-                        href={hotel.website}
-                        target="_blank"
-                        rel="noreferrer noopener"
-                        className="text-xs font-bold text-primary hover:underline"
-                      >
-                        Visit Website ↗
-                      </a>
-                    ) : null}
+                    <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+                      Free Cancellation
+                    </span>
                   </div>
 
-                  <div className="mt-2.5 flex items-center gap-2">
+                  <div className="mt-3 grid grid-cols-2 gap-2">
+                    {/* Food suggestions button */}
                     <button
                       type="button"
                       onClick={() => setSelectedFoodHotel(hotel)}
-                      className="w-full inline-flex items-center justify-center gap-1.5 rounded-xl border border-orange-200 bg-orange-50/70 px-3 py-1.5 text-xs font-bold text-orange-800 hover:bg-orange-100 transition-colors"
+                      className="inline-flex items-center justify-center gap-1.5 rounded-2xl border border-border bg-white px-3 py-2 text-xs font-bold text-foreground hover:bg-[#f7f7f7] transition-all"
                       title="Explore top delicacies & cafes near this hotel using Groq AI"
                     >
-                      <UtensilsIcon className="h-3.5 w-3.5 text-orange-600" />
+                      <UtensilsIcon className="h-3.5 w-3.5 text-orange-500" />
                       <span>Food Nearby</span>
                     </button>
+
+                    {/* Working Direct Book Now button */}
+                    <a
+                      href={hotel.bookingUrl || hotel.website || `https://www.booking.com/searchresults.html?ss=${encodeURIComponent(hotel.name + ' ' + selectedCity.name)}`}
+                      target="_blank"
+                      rel="noreferrer noopener"
+                      className="inline-flex items-center justify-center gap-1 rounded-2xl bg-primary px-3 py-2 text-xs font-bold text-white shadow-md hover:bg-primary/90 transition-all text-center"
+                    >
+                      <span>Book Now</span>
+                      <span>↗</span>
+                    </a>
                   </div>
                 </div>
               </div>
@@ -313,7 +350,6 @@ export function DashboardHotelExplorer() {
               <div className="flex items-center gap-1">
                 {Array.from({ length: totalPages }).map((_, i) => {
                   const pageNum = i + 1;
-                  // Show current, first, last, and immediate siblings
                   if (
                     pageNum === 1 ||
                     pageNum === totalPages ||
@@ -324,7 +360,7 @@ export function DashboardHotelExplorer() {
                         key={pageNum}
                         type="button"
                         onClick={() => setCurrentPage(pageNum)}
-                        className={`h-7 w-7 rounded-lg text-xs font-bold transition-colors ${
+                        className={`h-8 w-8 rounded-xl text-xs font-bold transition-colors ${
                           currentPage === pageNum
                             ? "bg-foreground text-white shadow-sm"
                             : "bg-[#f7f7f7] text-muted hover:bg-border hover:text-foreground"

@@ -25,6 +25,7 @@ export const searchCities = asyncHandler(async (req: Request, res: Response) => 
           OR: [
             { name: { contains: q as string, mode: 'insensitive' as const } },
             { country: { contains: q as string, mode: 'insensitive' as const } },
+            { region: { contains: q as string, mode: 'insensitive' as const } },
           ],
         }
       : {}),

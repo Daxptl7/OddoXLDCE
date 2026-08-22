@@ -139,9 +139,9 @@ export function HotelExplorerModal({
               </p>
             </div>
           ) : !data || data.hotels.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-border p-8 text-center">
-              <p className="text-sm font-bold text-foreground">No hotels found matching your filter.</p>
-              <p className="mt-1 text-xs text-muted">Try clearing your search keyword or star filter.</p>
+            <div className="rounded-2xl border border-dashed border-border p-8 text-center bg-[#fafafa]">
+              <p className="text-sm font-bold text-foreground">No hotel listings found for {cityName}</p>
+              <p className="mt-1 text-xs text-muted">No active listings were returned by the API for this location or filter.</p>
             </div>
           ) : (
             <div className="flex flex-col gap-3 max-h-[58vh] overflow-y-auto pr-1">
@@ -162,11 +162,23 @@ export function HotelExplorerModal({
                         : "border-border bg-white hover:border-primary/50 hover:shadow-md"
                     }`}
                   >
-                    <div className="grid gap-3 md:grid-cols-[1fr_auto] md:items-start">
+                    <div className="grid gap-3 md:grid-cols-[auto_1fr_auto] md:items-center">
+                      {/* Photo Thumbnail */}
+                      <div
+                        className="h-24 w-28 shrink-0 rounded-xl bg-slate-100 bg-cover bg-center"
+                        style={{
+                          backgroundImage: `url(${hotel.photoUrl || `https://picsum.photos/seed/${encodeURIComponent(hotel.name)}/400/300`})`,
+                        }}
+                      />
+
                       <div>
                         <div className="flex flex-wrap items-center gap-2">
                           <h4 className="font-bold text-foreground text-base">{hotel.name}</h4>
-                          {hotel.stars ? (
+                          {hotel.rating ? (
+                            <span className="rounded-full bg-primary/95 px-2 py-0.5 text-[10px] font-bold text-white shadow-sm">
+                              ⭐ {hotel.rating} / 10
+                            </span>
+                          ) : hotel.stars ? (
                             <span className="rounded-full bg-amber-50 border border-amber-200 px-2 py-0.5 text-[11px] font-bold text-amber-800">
                               {"★".repeat(hotel.stars)} {hotel.stars}-Star
                             </span>
@@ -176,11 +188,11 @@ export function HotelExplorerModal({
                           </span>
                         </div>
 
-                        <p className="mt-1 text-xs text-muted">{hotel.address}</p>
+                        <p className="mt-1 text-xs text-muted line-clamp-1">{hotel.address}</p>
 
                         {/* Amenities */}
-                        <div className="mt-2.5 flex flex-wrap gap-1.5">
-                          {hotel.amenities.map((amenity, aIdx) => (
+                        <div className="mt-2 flex flex-wrap gap-1">
+                          {hotel.amenities.slice(0, 3).map((amenity, aIdx) => (
                             <span
                               key={aIdx}
                               className="rounded-lg bg-[#f4f4f4] px-2 py-0.5 text-[10px] font-medium text-slate-700"
@@ -210,20 +222,19 @@ export function HotelExplorerModal({
                             onClick={() => setSelectedFoodHotel(hotel)}
                             title="Suggest famous food & cafes near this hotel using Groq AI"
                           >
-                            <UtensilsIcon className="h-3.5 w-3.5 text-primary" />
-                            <span>Food Nearby</span>
+                            <UtensilsIcon className="h-3.5 w-3.5 text-orange-500" />
+                            <span>Food</span>
                           </Button>
 
-                          {hotel.website ? (
-                            <a
-                              href={hotel.website}
-                              target="_blank"
-                              rel="noreferrer noopener"
-                              className="inline-flex items-center rounded-xl border border-border bg-white px-2.5 py-1.5 text-xs font-bold text-muted hover:text-foreground hover:bg-[#f7f7f7] transition-colors"
-                            >
-                              Website ↗
-                            </a>
-                          ) : null}
+                          {/* Direct Working Book Now Button */}
+                          <a
+                            href={hotel.bookingUrl || hotel.website || `https://www.booking.com/searchresults.html?ss=${encodeURIComponent(hotel.name + ' ' + cityName)}`}
+                            target="_blank"
+                            rel="noreferrer noopener"
+                            className="inline-flex items-center rounded-xl bg-primary px-2.5 py-1.5 text-xs font-bold text-white shadow-sm hover:bg-primary/90 transition-colors"
+                          >
+                            Book Now ↗
+                          </a>
 
                           <Button
                             size="sm"

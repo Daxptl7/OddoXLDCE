@@ -344,4 +344,110 @@ export const cities = [
       ['Ribeira riverside walk', 'sightseeing', 0, 60, 'Tiled houses under the Dom Luis bridge.'],
     ],
   },
+  {
+    name: 'Goa', country: 'India', region: 'South Asia', costIndex: 2, popularity: 95,
+    latitude: 15.2993, longitude: 74.1240, imageUrl: img('goa'),
+    activities: [
+      ['Baga & Anjuna beach hopping', 'outdoor', 0, 180, 'Relax on North Goa beaches with shacks and water sports.'],
+      ['Old Goa Portuguese churches', 'culture', 0, 120, 'Basilica of Bom Jesus and Se Cathedral.'],
+      ['Dudhsagar waterfalls jeep safari', 'outdoor', 2200, 300, 'Four-tiered waterfall trek through Mollem National Park.'],
+      ['Goan seafood & feni tasting', 'food', 1200, 120, 'Authentic prawn balchão, fish curry and local feni.'],
+      ['Fontainhas Latin Quarter walk', 'sightseeing', 0, 90, 'Colorful heritage streets of Panjim.'],
+      ['Mandovi sunset cruise', 'sightseeing', 600, 90, 'Evening river cruise with Goan folk music.'],
+    ],
+  },
+  {
+    name: 'Mumbai', country: 'India', region: 'South Asia', costIndex: 3, popularity: 94,
+    latitude: 19.0760, longitude: 72.8777, imageUrl: img('mumbai'),
+    activities: [
+      ['Gateway of India & Taj Palace', 'sightseeing', 0, 90, 'Iconic waterfront landmark and heritage hotel.'],
+      ['Elephanta Caves boat tour', 'culture', 800, 240, 'Rock-cut Shiva cave temples on Elephanta Island.'],
+      ['Chowpatty street food walk', 'food', 400, 90, 'Pav bhaji, bhel puri, and kulfi by Marine Drive.'],
+      ['Marine Drive sunset promenade', 'sightseeing', 0, 60, 'The Queen\'s Necklace coastline walk.'],
+      ['Bandra heritage & cafe trail', 'food', 800, 120, 'Artisan bakeries, street art, and Bollywood landmarks.'],
+    ],
+  },
+  {
+    name: 'Jaipur', country: 'India', region: 'South Asia', costIndex: 2, popularity: 92,
+    latitude: 26.9124, longitude: 75.7873, imageUrl: img('jaipur'),
+    activities: [
+      ['Amber Fort & Sheesh Mahal', 'culture', 500, 180, 'Hilltop royal fort with mirror palace.'],
+      ['Hawa Mahal photo stop', 'sightseeing', 200, 60, 'Palace of Winds facade in the Pink City.'],
+      ['City Palace & Jantar Mantar', 'culture', 700, 150, 'Royal residence and UNESCO astronomical observatory.'],
+      ['Chokhi Dhani Rajasthani feast', 'food', 1200, 240, 'Traditional cultural village with dal baati churma.'],
+      ['Johari Bazaar jewelry & textile walk', 'shopping', 0, 120, 'Famous bazaar for gemstones, bandhani and handicrafts.'],
+    ],
+  },
+  {
+    name: 'Delhi', country: 'India', region: 'South Asia', costIndex: 2, popularity: 91,
+    latitude: 28.6139, longitude: 77.2090, imageUrl: img('delhi'),
+    activities: [
+      ['Qutub Minar & Mehrauli complex', 'culture', 500, 120, 'UNESCO brick minaret dating to 1192.'],
+      ['Old Delhi Chandni Chowk food tour', 'food', 600, 150, 'Paranthe Wali Gali, jalebi and butter chicken.'],
+      ['Humayun\'s Tomb', 'culture', 500, 120, 'Red sandstone Mughal garden tomb.'],
+      ['India Gate & Kartavya Path', 'sightseeing', 0, 60, 'War memorial arch and gardens.'],
+      ['Lotus Temple visit', 'culture', 0, 75, 'Baháʼí House of Worship with petal architecture.'],
+    ],
+  },
+  {
+    name: 'Ahmedabad', country: 'India', region: 'South Asia', costIndex: 2, popularity: 88,
+    latitude: 23.0225, longitude: 72.5714, imageUrl: img('ahmedabad'),
+    activities: [
+      ['Sabarmati Ashram visit', 'culture', 0, 90, 'Mahatma Gandhi\'s historic headquarters along the river.'],
+      ['Adalaj Stepwell exploration', 'sightseeing', 0, 90, 'Intricate 5-story sandstone subterranean architecture.'],
+      ['Manek Chowk midnight food market', 'food', 500, 120, 'Famous night bazaar for chocolate sandwiches, kulfi, and pav bhaji.'],
+      ['Atal Foot Bridge & Sabarmati Riverfront', 'sightseeing', 100, 90, 'Scenic pedestrian bridge over the riverfront.'],
+      ['Traditional Gujarati Thali lunch', 'food', 600, 90, 'Unlimited royal thali with dhokla, fafda, and jalebi.'],
+    ],
+  },
+  {
+    name: 'Surat', country: 'India', region: 'South Asia', costIndex: 2, popularity: 84,
+    latitude: 21.1702, longitude: 72.8311, imageUrl: img('surat'),
+    activities: [
+      ['Dumas Beach promenade', 'outdoor', 0, 120, 'Coastal beach famous for lashkari bhajiya stalls.'],
+      ['Surat Diamond & Textile Market', 'shopping', 0, 120, 'World capital of polished diamonds and silk sarees.'],
+      ['Surti Locho & Sev Khamani breakfast', 'food', 250, 60, 'Authentic street snack unique to Surat with spicy chutneys.'],
+      ['Dutch Garden & Historic Cemetery', 'culture', 0, 60, 'Colonial-era gardens and European heritage tombs.'],
+    ],
+  },
+  {
+    name: 'Udaipur', country: 'India', region: 'South Asia', costIndex: 2, popularity: 90,
+    latitude: 24.5854, longitude: 73.7125, imageUrl: img('udaipur'),
+    activities: [
+      ['Lake Pichola boat cruise', 'sightseeing', 800, 90, 'Sunset cruise around Lake Palace and Jag Mandir.'],
+      ['Udaipur City Palace tour', 'culture', 400, 150, 'Largest palace complex in Rajasthan overlooking the lake.'],
+      ['Bagore Ki Haveli folk dance', 'culture', 200, 75, 'Evening Dharohar dance performance on Gangaur Ghat.'],
+      ['Monsoon Palace Sajjangarh sunset', 'sightseeing', 300, 90, 'Hilltop palace with panoramic valley views.'],
+    ],
+  },
+  {
+    name: 'Manali', country: 'India', region: 'South Asia', costIndex: 2, popularity: 89,
+    latitude: 32.2432, longitude: 77.1892, imageUrl: img('manali'),
+    activities: [
+      ['Solang Valley snow & adventure sports', 'outdoor', 2500, 240, 'Paragliding, zorbing and cable car views.'],
+      ['Hadimba Devi temple & cedar forest', 'culture', 0, 75, 'Ancient wooden temple surrounded by tall deodars.'],
+      ['Old Manali riverside cafe trail', 'food', 800, 120, 'Trout fish, apple cider, and live acoustic cafes.'],
+      ['Atal Tunnel & Sissu waterfall drive', 'sightseeing', 3000, 300, 'Scenic mountain pass to Lahaul valley.'],
+    ],
+  },
+  {
+    name: 'Varanasi', country: 'India', region: 'South Asia', costIndex: 1, popularity: 91,
+    latitude: 25.3176, longitude: 82.9739, imageUrl: img('varanasi'),
+    activities: [
+      ['Dashashwamedh Ghat evening Ganga Aarti', 'culture', 0, 90, 'Spiritual ritual with brass lamps and chants.'],
+      ['Sunrise boat ride on the Ganges', 'sightseeing', 500, 120, 'Rowing past historic ghats in the morning mist.'],
+      ['Kashi Vishwanath Temple corridor', 'culture', 0, 90, 'Historic sacred golden temple of Lord Shiva.'],
+      ['Banarasi kachori, lassi & paan walk', 'food', 300, 90, 'Creamy blue lassi and famous Banarasi paan.'],
+    ],
+  },
+  {
+    name: 'Agra', country: 'India', region: 'South Asia', costIndex: 2, popularity: 93,
+    latitude: 27.1767, longitude: 78.0081, imageUrl: img('agra'),
+    activities: [
+      ['Taj Mahal sunrise visit', 'culture', 500, 180, 'UNESCO wonder of white marble at dawn.'],
+      ['Agra Fort exploration', 'culture', 400, 120, 'Mughal imperial red fort with view of Taj.'],
+      ['Mehtab Bagh sunset viewpoint', 'sightseeing', 100, 75, 'Garden reflection view across the Yamuna.'],
+      ['Agra Petha & Mughlai tasting', 'food', 350, 75, 'Sweet petha varieties and authentic Mughlai kebab.'],
+    ],
+  },
 ];

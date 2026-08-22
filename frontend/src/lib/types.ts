@@ -352,6 +352,8 @@ export interface Hotel {
   id: string;
   name: string;
   stars: number | null;
+  rating?: number | null;
+  reviewScore?: number | null;
   address: string;
   street: string | null;
   city: string;
@@ -360,13 +362,17 @@ export interface Hotel {
   latitude: number;
   longitude: number;
   website: string | null;
+  bookingUrl: string;
+  photoUrl?: string | null;
   phone: string | null;
   email: string | null;
   amenities: string[];
   estimatedPricePerNight: number;
+  currency: string;
   distanceKm: number;
   rooms?: number | null;
   wheelchair?: boolean | null;
+  source?: "booking-com" | "overpass" | "curated";
 }
 
 export interface HotelListResponse {

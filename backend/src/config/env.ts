@@ -21,6 +21,7 @@ export interface Env {
   groqApiKey?: string;
   groqModel: string;
   googleWeatherApiKey?: string;
+  rapidApiKey?: string;
   readonly isProd: boolean;
 }
 
@@ -38,6 +39,7 @@ export const env: Env = {
   groqApiKey: process.env.GROQ_API_KEY,
   groqModel: process.env.GROQ_MODEL ?? 'llama-3.3-70b-versatile',
   googleWeatherApiKey: process.env.GOOGLE_WEATHER_API_KEY || process.env.GOOGLE_MAPS_API_KEY,
+  rapidApiKey: process.env.RAPIDAPI_KEY,
   get isProd(): boolean {
     return this.nodeEnv === 'production';
   },
