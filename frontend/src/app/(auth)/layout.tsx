@@ -3,7 +3,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
     <div className="flex flex-1 items-center justify-center bg-background px-4 py-12">
       <div className="w-full max-w-sm">
         <div className="mb-8 text-center">
-          <h1 className="text-2xl font-semibold text-foreground">GlobeTrotter</h1>
+          <h1 className="text-2xl font-semibold text-foreground">GoVenture</h1>
           <p className="mt-1 text-sm text-muted">Plan multi-city trips, watch the budget derive itself.</p>
         </div>
         {children}

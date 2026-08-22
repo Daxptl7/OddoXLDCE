@@ -21,7 +21,7 @@ export function Navbar() {
         <div className="flex items-center gap-6">
           <Link href="/dashboard" className="flex items-center gap-2 text-lg font-bold text-primary">
             <LogoIcon className="h-8 w-8" />
-            <span className="hidden sm:inline">GlobeTrotter</span>
+            <span className="hidden sm:inline">GoVenture</span>
           </Link>
           <nav className="hidden gap-1 sm:flex">
             {links.map(({ href, label, Icon }) => (

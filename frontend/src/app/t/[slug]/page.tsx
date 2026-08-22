@@ -72,7 +72,7 @@ export default async function PublicTripPage({ params }: { params: Promise<{ slu
         <ItineraryDayList itinerary={itinerary} />
       </div>
 
-      <p className="text-center text-xs text-muted">Shared read-only via GlobeTrotter — no account needed to view.</p>
+      <p className="text-center text-xs text-muted">Shared read-only via GoVenture — no account needed to view.</p>
     </div>
   );
 }

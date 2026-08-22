@@ -3,24 +3,13 @@ import type { ReactNode } from "react";
 import { PublicNavbar } from "@/components/home/PublicNavbar";
 import { HeroScroller } from "@/components/home/HeroScroller";
 import { WorkflowSection } from "@/components/home/WorkflowSection";
+import { PublicSiteChatbot } from "@/components/ai/PublicSiteChatbot";
 import {
   CalendarIcon,
-  CompassIcon,
-  HomeIcon,
   MapPinIcon,
   SearchIcon,
-  SparklesIcon,
   UsersIcon,
-  WalletIcon,
 } from "@/components/ui/Icons";
-
-const categories = [
-  { label: "Homes", Icon: HomeIcon },
-  { label: "Experiences", Icon: SparklesIcon },
-  { label: "Culture", Icon: CompassIcon },
-  { label: "Budget", Icon: WalletIcon },
-  { label: "Calendar", Icon: CalendarIcon },
-];
 
 export default function HomePage() {
   return (
@@ -31,14 +20,11 @@ export default function HomePage() {
         <HeroScroller />
 
         <div className="relative z-10 mx-auto flex w-full max-w-6xl flex-col items-center px-4 text-center sm:px-6">
-          <h1 className="max-w-3xl text-4xl font-bold leading-tight text-white sm:text-6xl">
-            GlobeTrotter
+          <h1 className="text-5xl font-extrabold tracking-tight text-white sm:text-7xl">
+            GoVenture
           </h1>
-          <p className="mt-4 max-w-2xl text-base font-medium text-white/95 sm:text-xl">
-            Search cities, build a multi-stop itinerary, schedule activities, and keep the whole trip inside budget.
-          </p>
 
-          <div className="mt-8 w-full max-w-4xl rounded-full bg-white p-2 shadow-2xl max-md:rounded-3xl">
+          <div className="mt-10 w-full max-w-4xl rounded-full bg-white p-2 shadow-2xl max-md:rounded-3xl">
             <div className="grid grid-cols-1 items-center divide-y divide-border md:grid-cols-[1.3fr_1fr_1fr_auto] md:divide-x md:divide-y-0">
               <SearchCell icon={<MapPinIcon className="h-5 w-5" />} label="Where" value="Search destinations" />
               <SearchCell icon={<CalendarIcon className="h-5 w-5" />} label="When" value="Add dates" />
@@ -53,21 +39,8 @@ export default function HomePage() {
             </div>
           </div>
 
-          <div className="scrollbar-hide mt-7 flex w-full max-w-3xl gap-3 overflow-x-auto px-1 py-1">
-            {categories.map(({ label, Icon }) => (
-              <Link
-                key={label}
-                href="/signup"
-                className="flex min-w-[108px] flex-col items-center gap-2 rounded-2xl border border-white/35 bg-white/90 px-4 py-3 text-sm font-semibold text-[#222222] shadow-sm backdrop-blur hover:bg-white"
-              >
-                <Icon className="h-6 w-6" />
-                {label}
-              </Link>
-            ))}
-          </div>
-
           <div className="mt-8 flex items-center gap-5 text-white">
-            <Link href="/signup" className="rounded-full bg-white px-6 py-3 text-sm font-bold text-[#222222] transition-colors hover:bg-white/90">
+            <Link href="/signup" className="rounded-full bg-white px-6 py-3 text-sm font-bold text-[#222222] transition-colors hover:bg-white/90 shadow-md">
               Get started
             </Link>
             <Link href="/login" className="text-sm font-bold underline-offset-4 hover:underline">
@@ -78,6 +51,7 @@ export default function HomePage() {
       </section>
 
       <WorkflowSection />
+      <PublicSiteChatbot />
     </div>
   );
 }

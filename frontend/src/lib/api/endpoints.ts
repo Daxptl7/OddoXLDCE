@@ -3,9 +3,11 @@ import type {
   ActivityListResponse,
   AddStopActivityInput,
   AiOptimizeResponse,
+  AiHomeChatResponse,
   AiPlanInput,
   AiPlanResponse,
   AiRecommendResponse,
+  AiScheduleResponse,
   AuthResponse,
   CatalogueSort,
   CityListResponse,
@@ -101,7 +103,9 @@ export const publicTrips = {
 };
 
 export const ai = {
+  homeChat: (message: string) => api.post<AiHomeChatResponse>("/ai/home-chat", { message }),
   plan: (data: AiPlanInput) => api.post<AiPlanResponse>("/ai/plan", data),
+  schedule: (prompt: string, tripId?: number) => api.post<AiScheduleResponse>("/ai/schedule", { prompt, tripId }),
   recommend: (tripId: number, limit = 3) => api.post<AiRecommendResponse>("/ai/recommend", { tripId, limit }),
   optimize: (tripId: number, targetBudget: number) =>
     api.post<AiOptimizeResponse>("/ai/optimize", { tripId, targetBudget }),

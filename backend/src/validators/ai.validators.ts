@@ -18,6 +18,17 @@ export const aiOptimizeSchema = z.object({
   targetBudget: z.coerce.number().min(0),
 });
 
+export const aiHomeChatSchema = z.object({
+  message: z.string().trim().min(1).max(1000),
+});
+
+export const aiScheduleSchema = z.object({
+  prompt: z.string().trim().min(3).max(2000),
+  tripId: z.coerce.number().int().positive().optional(),
+});
+
 export type AiPlanInput = z.infer<typeof aiPlanSchema>;
 export type AiTripInput = z.infer<typeof aiTripSchema>;
 export type AiOptimizeInput = z.infer<typeof aiOptimizeSchema>;
+export type AiHomeChatInput = z.infer<typeof aiHomeChatSchema>;
+export type AiScheduleInput = z.infer<typeof aiScheduleSchema>;

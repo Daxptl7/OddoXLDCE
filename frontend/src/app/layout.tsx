@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "GlobeTrotter",
+  title: "GoVenture",
   description: "Plan a multi-city trip and watch the budget derive itself from the itinerary.",
 };
 

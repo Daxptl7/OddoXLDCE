@@ -29,7 +29,7 @@ export function WorkflowSection() {
       <div className="flex flex-col gap-2">
         <h2 className="text-2xl font-bold text-foreground sm:text-3xl">Plan the full trip loop</h2>
         <p className="max-w-2xl text-sm text-muted">
-          The core GlobeTrotter flow stays intact: cities, dates, activities, budget, calendar, and public sharing.
+          The core GoVenture flow stays intact: cities, dates, activities, budget, calendar, and public sharing.
         </p>
       </div>
       <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">

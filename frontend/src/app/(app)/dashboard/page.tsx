@@ -9,6 +9,7 @@ import { ErrorBanner, errorMessage } from "@/components/ui/ErrorBanner";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Button } from "@/components/ui/Button";
 import { TripCard } from "@/components/trips/TripCard";
+import { DashboardTripAssistant } from "@/components/ai/DashboardTripAssistant";
 import { CalendarIcon, CompassIcon, MapPinIcon, PlusIcon, SparklesIcon } from "@/components/ui/Icons";
 
 export default function DashboardPage() {
@@ -125,6 +126,8 @@ export default function DashboardPage() {
           ))}
         </div>
       </section>
+
+      <DashboardTripAssistant recentTrips={recentTrips} upcomingTrips={upcomingTrips} />
     </div>
   );
 }

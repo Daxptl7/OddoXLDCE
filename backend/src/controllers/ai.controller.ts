@@ -2,10 +2,11 @@ import type { Request, Response } from 'express';
 import { env } from '../config/env.js';
 import { prisma } from '../lib/prisma.js';
 import { getTripBudget } from '../services/budget.service.js';
-import { serializeActivity, serializeCity } from '../services/serializers.js';
+import { serializeActivity, serializeCity, serializeTrip } from '../services/serializers.js';
 import { getOwnedTrip } from '../services/trip.service.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
-import type { AiOptimizeInput, AiPlanInput, AiTripInput } from '../validators/ai.validators.js';
+import { addDays, formatDateOnly, toDateOnly } from '../utils/dates.js';
+import type { AiHomeChatInput, AiOptimizeInput, AiPlanInput, AiScheduleInput, AiTripInput } from '../validators/ai.validators.js';
 
 const categoryForInterest = (interest: string): string | null => {
   const value = interest.toLowerCase();
@@ -43,6 +44,38 @@ interface GroqPlanResult {
   fallbackReason?: PlanFallbackReason;
 }
 
+interface GeneratedScheduleStop {
+  cityId: number;
+  arrivalDate: string;
+  departureDate: string;
+  activityIds: number[];
+  notes: string;
+}
+
+interface GeneratedSchedule {
+  title: string;
+  description: string;
+  startDate: string;
+  endDate: string;
+  targetBudget: number | null;
+  stops: GeneratedScheduleStop[];
+}
+
+interface GroqChatPayload {
+  model: string;
+  temperature: number;
+  messages: Array<{ role: 'system' | 'user'; content: string }>;
+  response_format:
+    | { type: 'json_object' }
+    | {
+        type: 'json_schema';
+        json_schema: {
+          name: string;
+          schema: Record<string, unknown>;
+        };
+      };
+}
+
 const generatedPlanSchema = {
   type: 'object',
   additionalProperties: false,
@@ -65,6 +98,36 @@ const generatedPlanSchema = {
             items: { type: 'number' },
           },
           reason: { type: 'string' },
+        },
+      },
+    },
+  },
+};
+
+const generatedScheduleSchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['title', 'description', 'startDate', 'endDate', 'targetBudget', 'stops'],
+  properties: {
+    title: { type: 'string' },
+    description: { type: 'string' },
+    startDate: { type: 'string' },
+    endDate: { type: 'string' },
+    targetBudget: { type: ['number', 'null'] },
+    stops: {
+      type: 'array',
+      minItems: 1,
+      maxItems: 4,
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['cityId', 'arrivalDate', 'departureDate', 'activityIds', 'notes'],
+        properties: {
+          cityId: { type: 'number' },
+          arrivalDate: { type: 'string' },
+          departureDate: { type: 'string' },
+          activityIds: { type: 'array', items: { type: 'number' } },
+          notes: { type: 'string' },
         },
       },
     },
@@ -148,6 +211,118 @@ function fallbackPlan(
   };
 }
 
+function buildGroqMessages(input: AiPlanInput, cities: CandidateCity[], activities: CandidateActivity): GroqChatPayload['messages'] {
+  return [
+    {
+      role: 'system',
+      content:
+        'You are GlobeTrotter planning AI. Build practical multi-city itineraries using ONLY provided city IDs and activity IDs. Never invent IDs, cities, activities, or prices. Return JSON only with title, summary, and stops.',
+    },
+    {
+      role: 'user',
+      content: JSON.stringify({
+        request: input,
+        outputShape: {
+          title: 'string',
+          summary: 'string',
+          stops: [{ cityId: 'number', suggestedDays: 'number', activityIds: ['number'], reason: 'string' }],
+        },
+        constraints: [
+          'Return 1 to 4 stops.',
+          'Use only cityId values from candidateCities.',
+          'Use only activityIds from candidateActivities and match them to the same city.',
+          'Balance cost, variety, and the user interests.',
+          'Keep suggestedDays total close to durationDays.',
+        ],
+        candidateCities: cities.map((city) => ({
+          id: city.id,
+          name: city.name,
+          country: city.country,
+          region: city.region,
+          costIndex: city.costIndex,
+          popularity: city.popularity,
+        })),
+        candidateActivities: activities.map((activity) => ({
+          id: activity.id,
+          cityId: activity.cityId,
+          name: activity.name,
+          category: activity.category,
+          estimatedCost: Number(activity.estimatedCost),
+          durationMinutes: activity.durationMinutes,
+        })),
+      }),
+    },
+  ];
+}
+
+function parseGeneratedPlan(text: string): GeneratedPlan | null {
+  try {
+    return JSON.parse(text) as GeneratedPlan;
+  } catch {
+    const start = text.indexOf('{');
+    const end = text.lastIndexOf('}');
+    if (start === -1 || end <= start) return null;
+
+    try {
+      return JSON.parse(text.slice(start, end + 1)) as GeneratedPlan;
+    } catch {
+      return null;
+    }
+  }
+}
+
+function parseGeneratedSchedule(text: string): GeneratedSchedule | null {
+  try {
+    return JSON.parse(text) as GeneratedSchedule;
+  } catch {
+    const start = text.indexOf('{');
+    const end = text.lastIndexOf('}');
+    if (start === -1 || end <= start) return null;
+
+    try {
+      return JSON.parse(text.slice(start, end + 1)) as GeneratedSchedule;
+    } catch {
+      return null;
+    }
+  }
+}
+
+async function requestGroqPlan(payload: GroqChatPayload) {
+  return fetch('https://api.groq.com/openai/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${env.groqApiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  });
+}
+
+async function requestGroqText(messages: GroqChatPayload['messages']): Promise<string | null> {
+  if (!env.groqApiKey) return null;
+
+  const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${env.groqApiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: env.groqModel,
+      temperature: 0.45,
+      messages,
+    }),
+  });
+
+  if (!response.ok) {
+    console.warn('Groq chat request failed', response.status, await response.text().catch(() => ''));
+    return null;
+  }
+
+  const payload = await response.json() as { choices?: Array<{ message?: { content?: string | null } }> };
+  return payload.choices?.[0]?.message?.content ?? null;
+}
+
 async function callGroqPlan(input: AiPlanInput, cities: CandidateCity[], activities: CandidateActivity): Promise<GroqPlanResult> {
   if (!env.groqApiKey) {
     return {
@@ -159,60 +334,30 @@ async function callGroqPlan(input: AiPlanInput, cities: CandidateCity[], activit
     };
   }
 
-  const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${env.groqApiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: env.groqModel,
-      temperature: 0.75,
-      messages: [
-        {
-          role: 'system',
-          content:
-            'You are GlobeTrotter planning AI. Build practical multi-city itineraries using ONLY provided city IDs and activity IDs. Never invent IDs, cities, activities, or prices.',
-        },
-        {
-          role: 'user',
-          content: JSON.stringify({
-            request: input,
-            constraints: [
-              'Return 1 to 4 stops.',
-              'Use only cityId values from candidateCities.',
-              'Use only activityIds from candidateActivities and match them to the same city.',
-              'Balance cost, variety, and the user interests.',
-              'Keep suggestedDays total close to durationDays.',
-            ],
-            candidateCities: cities.map((city) => ({
-              id: city.id,
-              name: city.name,
-              country: city.country,
-              region: city.region,
-              costIndex: city.costIndex,
-              popularity: city.popularity,
-            })),
-            candidateActivities: activities.map((activity) => ({
-              id: activity.id,
-              cityId: activity.cityId,
-              name: activity.name,
-              category: activity.category,
-              estimatedCost: Number(activity.estimatedCost),
-              durationMinutes: activity.durationMinutes,
-            })),
-          }),
-        },
-      ],
-      response_format: {
-        type: 'json_schema',
-        json_schema: {
-          name: 'globetrotter_plan',
-          schema: generatedPlanSchema,
-        },
+  const basePayload = {
+    model: env.groqModel,
+    temperature: 0.75,
+    messages: buildGroqMessages(input, cities, activities),
+  };
+
+  const schemaPayload: GroqChatPayload = {
+    ...basePayload,
+    response_format: {
+      type: 'json_schema',
+      json_schema: {
+        name: 'globetrotter_plan',
+        schema: generatedPlanSchema,
       },
-    }),
-  });
+    },
+  };
+
+  let response = await requestGroqPlan(schemaPayload);
+  if (!response.ok && response.status === 400) {
+    response = await requestGroqPlan({
+      ...basePayload,
+      response_format: { type: 'json_object' },
+    });
+  }
 
   if (!response.ok) {
     const details = await response.text().catch(() => '');
@@ -239,7 +384,16 @@ async function callGroqPlan(input: AiPlanInput, cities: CandidateCity[], activit
   }
 
   try {
-    return { plan: JSON.parse(text) as GeneratedPlan };
+    const plan = parseGeneratedPlan(text);
+    if (plan) return { plan };
+
+    return {
+      plan: null,
+      fallbackReason: {
+        code: 'groq_invalid_json',
+        message: 'Generated locally because Groq returned a response that was not valid JSON.',
+      },
+    };
   } catch {
     return {
       plan: null,
@@ -307,6 +461,286 @@ export const planTrip = asyncHandler(async (req: Request, res: Response) => {
         },
       ),
   );
+});
+
+export const getAiStatus = asyncHandler(async (_req: Request, res: Response) => {
+  res.json({
+    provider: 'groq',
+    configured: Boolean(env.groqApiKey),
+    model: env.groqModel,
+  });
+});
+
+export const homeChat = asyncHandler(async (req: Request, res: Response) => {
+  const { message } = req.body as AiHomeChatInput;
+  const answer = await requestGroqText([
+    {
+      role: 'system',
+      content:
+        'You are the GlobeTrotter website assistant. Answer only questions about GlobeTrotter: multi-city trip planning, itineraries, scheduling activities, budgets, sharing trips, signup/login, and how the site helps travelers. Keep answers short, friendly, and practical. If asked unrelated questions, politely bring the user back to GlobeTrotter.',
+    },
+    { role: 'user', content: message },
+  ]);
+
+  res.json({
+    source: answer ? 'groq' : 'seeded-fallback',
+    message:
+      answer ??
+      'GlobeTrotter helps you create multi-city trips, schedule activities by day, track budget health, and share or copy trip plans after you sign up.',
+  });
+});
+
+function isDateOnly(value: unknown): value is string {
+  return typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value);
+}
+
+function safeDate(value: unknown, fallback: string): string {
+  return isDateOnly(value) ? value : fallback;
+}
+
+function normalizeSchedule(
+  generated: GeneratedSchedule,
+  cities: CandidateCity[],
+  activities: CandidateActivity,
+): GeneratedSchedule | null {
+  const defaultStart = formatDateOnly(addDays(new Date(), 30))!;
+  const defaultEnd = formatDateOnly(addDays(defaultStart, 6))!;
+  const cityIds = new Set(cities.map((city) => city.id));
+  const activitiesById = new Map(activities.map((activity) => [activity.id, activity]));
+  const startDate = safeDate(generated.startDate, defaultStart);
+  const endDate = safeDate(generated.endDate, defaultEnd);
+
+  const stops = generated.stops.flatMap((stop, index) => {
+    if (!cityIds.has(Number(stop.cityId))) return [];
+    const arrivalDate = safeDate(stop.arrivalDate, index === 0 ? startDate : defaultStart);
+    const departureDate = safeDate(stop.departureDate, arrivalDate);
+    const activityIds = stop.activityIds
+      .map(Number)
+      .filter((id) => activitiesById.get(id)?.cityId === Number(stop.cityId))
+      .slice(0, 4);
+
+    return [{
+      cityId: Number(stop.cityId),
+      arrivalDate,
+      departureDate: departureDate >= arrivalDate ? departureDate : arrivalDate,
+      activityIds,
+      notes: stop.notes || 'Scheduled by the dashboard AI assistant.',
+    }];
+  }).slice(0, 4);
+
+  if (stops.length === 0) return null;
+
+  const normalizedStart = stops.reduce((earliest, stop) => stop.arrivalDate < earliest ? stop.arrivalDate : earliest, startDate);
+  const normalizedEnd = stops.reduce((latest, stop) => stop.departureDate > latest ? stop.departureDate : latest, endDate);
+
+  return {
+    title: generated.title?.trim() || 'AI scheduled trip',
+    description: generated.description?.trim() || 'Created from your dashboard assistant prompt.',
+    startDate: normalizedStart,
+    endDate: normalizedEnd >= normalizedStart ? normalizedEnd : normalizedStart,
+    targetBudget: typeof generated.targetBudget === 'number' && generated.targetBudget >= 0 ? generated.targetBudget : null,
+    stops,
+  };
+}
+
+function fallbackSchedule(prompt: string, cities: CandidateCity[], activities: CandidateActivity): GeneratedSchedule | null {
+  const picked = cities.slice(0, 2);
+  if (picked.length === 0) return null;
+
+  const startDate = formatDateOnly(addDays(new Date(), 30))!;
+  const stops = picked.map((city, index) => {
+    const arrivalDate = formatDateOnly(addDays(startDate, index * 2))!;
+    const departureDate = formatDateOnly(addDays(arrivalDate, 1))!;
+    return {
+      cityId: city.id,
+      arrivalDate,
+      departureDate,
+      activityIds: activities.filter((activity) => activity.cityId === city.id).slice(0, 3).map((activity) => activity.id),
+      notes: `Added from your prompt: ${prompt.slice(0, 120)}`,
+    };
+  });
+
+  return {
+    title: 'AI scheduled trip',
+    description: 'Created from your dashboard assistant prompt.',
+    startDate,
+    endDate: stops[stops.length - 1]?.departureDate ?? startDate,
+    targetBudget: null,
+    stops,
+  };
+}
+
+async function generateSchedule(prompt: string, cities: CandidateCity[], activities: CandidateActivity): Promise<{ source: 'groq' | 'seeded-fallback'; schedule: GeneratedSchedule | null; note?: string }> {
+  if (!env.groqApiKey) {
+    return {
+      source: 'seeded-fallback',
+      schedule: fallbackSchedule(prompt, cities, activities),
+      note: 'GROQ_API_KEY is not configured, so a catalogue fallback was used.',
+    };
+  }
+
+  const today = formatDateOnly(new Date())!;
+  const payload: GroqChatPayload = {
+    model: env.groqModel,
+    temperature: 0.65,
+    messages: [
+      {
+        role: 'system',
+        content:
+          'You are GlobeTrotter dashboard AI. Convert a user prompt into a scheduled trip using ONLY provided city IDs and activity IDs. Return JSON only. Do not invent IDs. Use YYYY-MM-DD dates. If dates are missing, choose future dates after today.',
+      },
+      {
+        role: 'user',
+        content: JSON.stringify({
+          today,
+          prompt,
+          outputShape: {
+            title: 'string',
+            description: 'string',
+            startDate: 'YYYY-MM-DD',
+            endDate: 'YYYY-MM-DD',
+            targetBudget: 'number|null',
+            stops: [{ cityId: 'number', arrivalDate: 'YYYY-MM-DD', departureDate: 'YYYY-MM-DD', activityIds: ['number'], notes: 'string' }],
+          },
+          candidateCities: cities.map((city) => ({
+            id: city.id,
+            name: city.name,
+            country: city.country,
+            region: city.region,
+            costIndex: city.costIndex,
+            popularity: city.popularity,
+          })),
+          candidateActivities: activities.map((activity) => ({
+            id: activity.id,
+            cityId: activity.cityId,
+            name: activity.name,
+            category: activity.category,
+            estimatedCost: Number(activity.estimatedCost),
+            durationMinutes: activity.durationMinutes,
+          })),
+        }),
+      },
+    ],
+    response_format: {
+      type: 'json_schema',
+      json_schema: {
+        name: 'globetrotter_schedule',
+        schema: generatedScheduleSchema,
+      },
+    },
+  };
+
+  let response = await requestGroqPlan(payload);
+  if (!response.ok && response.status === 400) {
+    response = await requestGroqPlan({ ...payload, response_format: { type: 'json_object' } });
+  }
+
+  if (!response.ok) {
+    console.warn('Groq schedule request failed', response.status, await response.text().catch(() => ''));
+    return {
+      source: 'seeded-fallback',
+      schedule: fallbackSchedule(prompt, cities, activities),
+      note: `Groq returned HTTP ${response.status}, so a catalogue fallback was used.`,
+    };
+  }
+
+  const body = await response.json() as { choices?: Array<{ message?: { content?: string | null } }> };
+  const text = body.choices?.[0]?.message?.content;
+  const generated = text ? parseGeneratedSchedule(text) : null;
+  const schedule = generated ? normalizeSchedule(generated, cities, activities) : null;
+
+  return {
+    source: schedule ? 'groq' : 'seeded-fallback',
+    schedule: schedule ?? fallbackSchedule(prompt, cities, activities),
+    note: schedule ? undefined : 'Groq returned an invalid schedule, so a catalogue fallback was used.',
+  };
+}
+
+export const scheduleTrip = asyncHandler(async (req: Request, res: Response) => {
+  const { prompt, tripId } = req.body as AiScheduleInput;
+  const cities = await findCandidateCities(prompt);
+  const activities = await findCandidateActivities(cities.map((city) => city.id), [prompt]);
+  const result = await generateSchedule(prompt, cities, activities);
+
+  if (!result.schedule) {
+    res.status(400).json({ error: { message: 'No catalogue cities were available for this prompt.' } });
+    return;
+  }
+
+  const activityIdsByCity = new Map<number, number[]>();
+  for (const stop of result.schedule.stops) {
+    activityIdsByCity.set(stop.cityId, stop.activityIds);
+  }
+
+  const trip = await prisma.$transaction(async (tx) => {
+    const existing = tripId ? await getOwnedTrip(tripId, req.user!.id) : null;
+    const savedTrip = existing
+      ? await tx.trip.update({
+          where: { id: existing.id },
+          data: {
+            name: result.schedule!.title,
+            description: result.schedule!.description,
+            startDate: toDateOnly(result.schedule!.startDate),
+            endDate: toDateOnly(result.schedule!.endDate),
+            targetBudget: result.schedule!.targetBudget,
+          },
+        })
+      : await tx.trip.create({
+          data: {
+            userId: req.user!.id,
+            name: result.schedule!.title,
+            description: result.schedule!.description,
+            startDate: toDateOnly(result.schedule!.startDate),
+            endDate: toDateOnly(result.schedule!.endDate),
+            targetBudget: result.schedule!.targetBudget,
+          },
+        });
+
+    if (existing) {
+      await tx.tripStop.deleteMany({ where: { tripId: savedTrip.id } });
+    }
+
+    for (const [index, stop] of result.schedule!.stops.entries()) {
+      const savedStop = await tx.tripStop.create({
+        data: {
+          tripId: savedTrip.id,
+          cityId: stop.cityId,
+          arrivalDate: toDateOnly(stop.arrivalDate),
+          departureDate: toDateOnly(stop.departureDate),
+          sortOrder: (index + 1) * 10,
+          accommodationCost: 0,
+          transportCost: 0,
+          notes: stop.notes,
+        },
+      });
+
+      const activityIds = activityIdsByCity.get(stop.cityId) ?? [];
+      for (const [activityIndex, activityId] of activityIds.entries()) {
+        await tx.stopActivity.create({
+          data: {
+            tripStopId: savedStop.id,
+            activityId,
+            scheduledDate: toDateOnly(formatDateOnly(addDays(stop.arrivalDate, activityIndex))! <= stop.departureDate
+              ? formatDateOnly(addDays(stop.arrivalDate, activityIndex))!
+              : stop.arrivalDate),
+            scheduledTime: `${String(9 + activityIndex * 2).padStart(2, '0')}:00`,
+          },
+        });
+      }
+    }
+
+    return tx.trip.findUnique({
+      where: { id: savedTrip.id },
+      include: { _count: { select: { stops: true } } },
+    });
+  });
+
+  res.status(tripId ? 200 : 201).json({
+    source: result.source,
+    message: tripId ? 'Trip updated by the dashboard AI assistant.' : 'Trip scheduled by the dashboard AI assistant.',
+    note: result.note,
+    trip: serializeTrip(trip!, { includeStops: false }),
+  });
 });
 
 export const recommendActivities = asyncHandler(async (req: Request, res: Response) => {

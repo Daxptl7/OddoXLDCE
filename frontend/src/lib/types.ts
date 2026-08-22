@@ -249,6 +249,18 @@ export interface AiOptimizeResponse {
   reason: string;
 }
 
+export interface AiHomeChatResponse {
+  source: "groq" | "seeded-fallback";
+  message: string;
+}
+
+export interface AiScheduleResponse {
+  source: "groq" | "seeded-fallback";
+  message: string;
+  note?: string;
+  trip: SerializedTrip;
+}
+
 export type TripScope = "all" | "upcoming" | "past";
 export type CatalogueSort = "popularity" | "name" | "cost" | "duration";
 

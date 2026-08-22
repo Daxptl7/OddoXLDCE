@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import clsx from "clsx";
-import { LogoIcon, MenuIcon, SearchIcon, UserIcon } from "@/components/ui/Icons";
+import { LogoIcon, MenuIcon, UserIcon } from "@/components/ui/Icons";
 
 export function PublicNavbar() {
   const [scrolled, setScrolled] = useState(false);
@@ -24,41 +24,26 @@ export function PublicNavbar() {
         scrolled ? "border-border bg-white/95 shadow-sm backdrop-blur" : "border-white/20 bg-white/90 backdrop-blur",
       )}
     >
-      <div className="mx-auto grid max-w-7xl grid-cols-[1fr_auto_1fr] items-center gap-4 px-4 py-3 sm:px-6">
+      <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6">
         <Link href="/" className="flex items-center gap-2 text-xl font-bold text-primary">
           <LogoIcon className="h-8 w-8" />
-          <span className="hidden sm:inline">GlobeTrotter</span>
+          <span>GoVenture</span>
         </Link>
-        <nav className="hidden items-center rounded-full border border-border bg-white px-2 py-1 shadow-sm md:flex">
-          <Link href="/" className="rounded-full px-4 py-2 text-sm font-semibold text-foreground hover:bg-[#f7f7f7]">
-            Homes
+        <div className="flex items-center gap-3">
+          <Link href="/login" className="rounded-full px-4 py-2 text-sm font-semibold text-foreground hover:bg-[#f7f7f7]">
+            Login
           </Link>
-          <a href="#workflow" className="rounded-full px-4 py-2 text-sm font-semibold text-foreground hover:bg-[#f7f7f7]">
-            Experiences
-          </a>
-          <Link href="/trips" className="rounded-full px-4 py-2 text-sm font-semibold text-foreground hover:bg-[#f7f7f7]">
-            Trips
+          <Link
+            href="/signup"
+            aria-label="Sign up"
+            className="flex items-center gap-2 rounded-full border border-border bg-white px-3 py-1.5 text-sm font-semibold text-foreground shadow-sm transition-shadow hover:shadow-md"
+          >
+            <MenuIcon className="h-5 w-5" />
+            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#222222] text-white">
+              <UserIcon className="h-4 w-4" />
+            </span>
+            <span className="hidden sm:inline">Sign up</span>
           </Link>
-          <Link href="/signup" className="ml-1 flex h-9 w-9 items-center justify-center rounded-full bg-primary text-white">
-            <SearchIcon className="h-4 w-4" />
-          </Link>
-        </nav>
-        <div className="flex justify-end">
-          <div className="flex items-center gap-2">
-            <Link href="/login" className="hidden rounded-full px-4 py-2 text-sm font-semibold text-foreground hover:bg-[#f7f7f7] sm:block">
-              Login
-            </Link>
-            <Link
-              href="/signup"
-              aria-label="Sign up"
-              className="flex items-center gap-2 rounded-full border border-border bg-white px-2 py-1.5 text-foreground shadow-sm transition-shadow hover:shadow-md"
-            >
-              <MenuIcon className="h-5 w-5" />
-              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#222222] text-white">
-                <UserIcon className="h-4 w-4" />
-              </span>
-            </Link>
-          </div>
         </div>
       </div>
     </header>
