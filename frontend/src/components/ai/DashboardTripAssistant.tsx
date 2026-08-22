@@ -71,12 +71,15 @@ export function DashboardTripAssistant({
         },
       ]);
       setTripId("");
-    } catch {
+    } catch (error) {
       setMessages((items) => [
         ...items,
         {
           role: "assistant",
-          text: "I could not schedule that trip. Check that the backend is running and Groq is configured.",
+          text:
+            error instanceof Error
+              ? error.message
+              : "I could not schedule that trip. Check that the backend is running and Groq is configured.",
         },
       ]);
     }

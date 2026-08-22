@@ -5,7 +5,7 @@ import { getTripBudget } from '../services/budget.service.js';
 import { serializeActivity, serializeCity, serializeTrip } from '../services/serializers.js';
 import { getOwnedTrip } from '../services/trip.service.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
-import { addDays, formatDateOnly, toDateOnly } from '../utils/dates.js';
+import { addDays, daysBetween, formatDateOnly, toDateOnly } from '../utils/dates.js';
 import type { AiHomeChatInput, AiOptimizeInput, AiPlanInput, AiScheduleInput, AiTripInput } from '../validators/ai.validators.js';
 
 const categoryForInterest = (interest: string): string | null => {
@@ -134,6 +134,82 @@ const supplementalCities: SupplementalCity[] = [
       ['Hawa Mahal photo stop', 'sightseeing', 300, 60, 'Iconic facade in the Pink City.'],
       ['Johari Bazaar shopping', 'shopping', 0, 120, 'Jewellery, textiles and handicrafts.'],
       ['Rajasthani thali dinner', 'food', 1800, 90, 'Classic local dinner with dal baati churma.'],
+    ],
+  },
+  {
+    aliases: ['udaipur', 'rajasthan', 'lake city', 'india'],
+    city: {
+      name: 'Udaipur',
+      country: 'India',
+      region: 'Rajasthan',
+      costIndex: 2,
+      popularity: 87,
+      latitude: 24.5854,
+      longitude: 73.7125,
+      imageUrl: 'https://picsum.photos/seed/udaipur/800/600',
+    },
+    activities: [
+      ['City Palace of Udaipur', 'culture', 800, 180, 'Grand palace complex overlooking Lake Pichola.'],
+      ['Lake Pichola sunset boat ride', 'sightseeing', 1200, 60, 'Scenic boat cruise past Jag Mandir and Lake Palace.'],
+      ['Bagore Ki Haveli cultural show', 'culture', 500, 90, 'Dharohar folk dance and puppet performance.'],
+      ['Saheliyon Ki Bari', 'sightseeing', 200, 60, 'Lush ornamental gardens with fountains and marble kiosks.'],
+    ],
+  },
+  {
+    aliases: ['goa', 'beach', 'south goa', 'north goa', 'india'],
+    city: {
+      name: 'Goa',
+      country: 'India',
+      region: 'West Coast',
+      costIndex: 2,
+      popularity: 94,
+      latitude: 15.2993,
+      longitude: 74.124,
+      imageUrl: 'https://picsum.photos/seed/goa/800/600',
+    },
+    activities: [
+      ['Calangute & Baga beach day', 'outdoor', 0, 240, 'Popular beach stretch with cafes and watersports.'],
+      ['Old Goa heritage walk', 'culture', 0, 120, 'Basilica of Bom Jesus and Se Cathedral.'],
+      ['Scuba diving at Grand Island', 'outdoor', 4500, 300, 'Boat trip and beginner scuba dive with gear.'],
+      ['Mandovi River sunset cruise', 'sightseeing', 1500, 90, 'Live Goan folk music and river sunset cruise.'],
+    ],
+  },
+  {
+    aliases: ['mumbai', 'bombay', 'maharashtra', 'india'],
+    city: {
+      name: 'Mumbai',
+      country: 'India',
+      region: 'Maharashtra',
+      costIndex: 3,
+      popularity: 92,
+      latitude: 19.076,
+      longitude: 72.8777,
+      imageUrl: 'https://picsum.photos/seed/mumbai/800/600',
+    },
+    activities: [
+      ['Gateway of India & Colaba walk', 'sightseeing', 0, 120, 'Iconic waterfront monument and heritage street walk.'],
+      ['Elephanta Caves ferry & tour', 'culture', 1200, 240, 'Boat ride from Gateway to rock-cut cave temples.'],
+      ['Marine Drive sunset walk', 'sightseeing', 0, 90, 'The Queen\'s Necklace promenade after dark.'],
+      ['Chowpatty street food crawl', 'food', 800, 90, 'Pav bhaji, bhelpuri and kulfi by the beach.'],
+    ],
+  },
+  {
+    aliases: ['agra', 'taj mahal', 'uttar pradesh', 'india'],
+    city: {
+      name: 'Agra',
+      country: 'India',
+      region: 'Uttar Pradesh',
+      costIndex: 2,
+      popularity: 93,
+      latitude: 27.1767,
+      longitude: 78.0081,
+      imageUrl: 'https://picsum.photos/seed/agra/800/600',
+    },
+    activities: [
+      ['Taj Mahal sunrise visit', 'sightseeing', 1500, 180, 'World wonder at the quietest and most scenic hour.'],
+      ['Agra Fort exploration', 'culture', 700, 120, 'Massive red sandstone fortress of Mughal emperors.'],
+      ['Mehtab Bagh sunset view', 'sightseeing', 400, 90, 'Gardens across the river with direct Taj Mahal views.'],
+      ['Mughlai culinary dinner', 'food', 1800, 90, 'Traditional Mughlai delicacies and kebabs.'],
     ],
   },
 ];
@@ -306,17 +382,26 @@ async function findCandidateCities(destinations: string) {
 
   const terms = searchTokens(destinations);
 
-  const matched = await prisma.city.findMany({
-    where: {
-      OR: terms.flatMap((term) => [
-        { name: { contains: term, mode: 'insensitive' as const } },
-        { country: { contains: term, mode: 'insensitive' as const } },
-        { region: { contains: term, mode: 'insensitive' as const } },
-      ]),
-    },
-    orderBy: [{ popularity: 'desc' }, { costIndex: 'asc' }],
-    take: 8,
-  });
+  let matched = terms.length
+    ? await prisma.city.findMany({
+        where: {
+          OR: terms.flatMap((term) => [
+            { name: { contains: term, mode: 'insensitive' as const } },
+            { country: { contains: term, mode: 'insensitive' as const } },
+            { region: { contains: term, mode: 'insensitive' as const } },
+          ]),
+        },
+        orderBy: [{ popularity: 'desc' }, { costIndex: 'asc' }],
+        take: 8,
+      })
+    : [];
+
+  if (matched.length === 0) {
+    matched = await prisma.city.findMany({
+      orderBy: [{ popularity: 'desc' }, { costIndex: 'asc' }],
+      take: 8,
+    });
+  }
 
   return matched;
 }
@@ -832,26 +917,38 @@ async function generateSchedule(prompt: string, cities: CandidateCity[], activit
 export const scheduleTrip = asyncHandler(async (req: Request, res: Response) => {
   const { prompt, tripId } = req.body as AiScheduleInput;
   const cities = await findCandidateCities(prompt);
-  if (cities.length === 0) {
-    res.status(400).json({
-      error: {
-        message: 'I could not match that destination to the trip catalogue yet. Try a nearby city or add the destination first.',
-      },
-    });
-    return;
-  }
-
   const activities = await findCandidateActivities(cities.map((city) => city.id), [prompt]);
   const result = await generateSchedule(prompt, cities, activities);
 
-  if (!result.schedule) {
-    res.status(400).json({ error: { message: 'No catalogue cities were available for this prompt.' } });
+  if (!result.schedule || result.schedule.stops.length === 0) {
+    result.schedule = fallbackSchedule(prompt, cities, activities);
+  }
+
+  if (!result.schedule || result.schedule.stops.length === 0) {
+    res.status(400).json({ error: { message: 'Could not schedule a trip for this prompt. Please try with different destinations.' } });
     return;
   }
 
   const activityIdsByCity = new Map<number, number[]>();
   for (const stop of result.schedule.stops) {
     activityIdsByCity.set(stop.cityId, stop.activityIds);
+  }
+
+  let calculatedBudget = result.schedule.targetBudget;
+  if (!calculatedBudget || calculatedBudget <= 0) {
+    let totalEst = 0;
+    for (const stop of result.schedule.stops) {
+      const nights = Math.max(1, daysBetween(stop.arrivalDate, stop.departureDate));
+      const city = cities.find((c) => c.id === stop.cityId);
+      const costIdx = city?.costIndex ?? 2;
+      totalEst += Math.round((2500 + costIdx * 1500) * nights) + Math.round(3000 + costIdx * 2000);
+      const actIds = activityIdsByCity.get(stop.cityId) ?? [];
+      for (const aId of actIds) {
+        const act = activities.find((a) => a.id === aId);
+        totalEst += Number(act?.estimatedCost ?? 1500);
+      }
+    }
+    calculatedBudget = Math.round(totalEst * 1.15);
   }
 
   const trip = await prisma.$transaction(async (tx) => {
@@ -864,7 +961,7 @@ export const scheduleTrip = asyncHandler(async (req: Request, res: Response) => 
             description: result.schedule!.description,
             startDate: toDateOnly(result.schedule!.startDate),
             endDate: toDateOnly(result.schedule!.endDate),
-            targetBudget: result.schedule!.targetBudget,
+            targetBudget: calculatedBudget,
           },
         })
       : await tx.trip.create({
@@ -874,7 +971,7 @@ export const scheduleTrip = asyncHandler(async (req: Request, res: Response) => 
             description: result.schedule!.description,
             startDate: toDateOnly(result.schedule!.startDate),
             endDate: toDateOnly(result.schedule!.endDate),
-            targetBudget: result.schedule!.targetBudget,
+            targetBudget: calculatedBudget,
           },
         });
 
@@ -883,6 +980,12 @@ export const scheduleTrip = asyncHandler(async (req: Request, res: Response) => 
     }
 
     for (const [index, stop] of result.schedule!.stops.entries()) {
+      const nights = Math.max(1, daysBetween(stop.arrivalDate, stop.departureDate));
+      const city = cities.find((c) => c.id === stop.cityId);
+      const costIdx = city?.costIndex ?? 2;
+      const accommodationCost = Math.round((2500 + costIdx * 1500) * nights);
+      const transportCost = Math.round(3000 + costIdx * 2000);
+
       const savedStop = await tx.tripStop.create({
         data: {
           tripId: savedTrip.id,
@@ -890,8 +993,8 @@ export const scheduleTrip = asyncHandler(async (req: Request, res: Response) => 
           arrivalDate: toDateOnly(stop.arrivalDate),
           departureDate: toDateOnly(stop.departureDate),
           sortOrder: (index + 1) * 10,
-          accommodationCost: 0,
-          transportCost: 0,
+          accommodationCost,
+          transportCost,
           notes: stop.notes,
         },
       });
@@ -902,9 +1005,11 @@ export const scheduleTrip = asyncHandler(async (req: Request, res: Response) => 
           data: {
             tripStopId: savedStop.id,
             activityId,
-            scheduledDate: toDateOnly(formatDateOnly(addDays(stop.arrivalDate, activityIndex))! <= stop.departureDate
-              ? formatDateOnly(addDays(stop.arrivalDate, activityIndex))!
-              : stop.arrivalDate),
+            scheduledDate: toDateOnly(
+              formatDateOnly(addDays(stop.arrivalDate, activityIndex))! <= stop.departureDate
+                ? formatDateOnly(addDays(stop.arrivalDate, activityIndex))!
+                : stop.arrivalDate,
+            ),
             scheduledTime: `${String(9 + activityIndex * 2).padStart(2, '0')}:00`,
           },
         });
