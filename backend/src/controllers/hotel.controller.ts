@@ -14,13 +14,29 @@ export const listHotels = asyncHandler(async (req: Request, res: Response) => {
 
   if (cityId) {
     const city = await prisma.city.findUnique({ where: { id: cityId } });
-    if (!city) throw ApiError.notFound('City not found');
-    cityName = city.name;
-    country = city.country;
-    lat = city.latitude ?? 48.8566;
-    lng = city.longitude ?? 2.3522;
-    costIndex = city.costIndex;
-  } else if (!cityName) {
+    if (city) {
+      cityName = city.name;
+      country = city.country;
+      lat = city.latitude ?? 48.8566;
+      lng = city.longitude ?? 2.3522;
+      costIndex = city.costIndex;
+    }
+  }
+
+  if (!lat && !lng && cityName) {
+    const city = await prisma.city.findFirst({
+      where: { name: { equals: cityName, mode: 'insensitive' } },
+    });
+    if (city) {
+      cityName = city.name;
+      country = city.country;
+      lat = city.latitude ?? 48.8566;
+      lng = city.longitude ?? 2.3522;
+      costIndex = city.costIndex;
+    }
+  }
+
+  if (!cityName) {
     throw ApiError.badRequest('cityId or cityName is required');
   }
 

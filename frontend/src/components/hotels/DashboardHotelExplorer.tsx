@@ -17,20 +17,18 @@ import {
 import type { Hotel } from "@/lib/types";
 
 const POPULAR_DESTINATIONS = [
-  { id: 101, name: "Goa", country: "India" },
-  { id: 102, name: "Mumbai", country: "India" },
-  { id: 103, name: "Jaipur", country: "India" },
-  { id: 104, name: "Delhi", country: "India" },
-  { id: 105, name: "Ahmedabad", country: "India" },
-  { id: 106, name: "Udaipur", country: "India" },
-  { id: 107, name: "Manali", country: "India" },
   { id: 1, name: "Paris", country: "France" },
   { id: 2, name: "Rome", country: "Italy" },
   { id: 3, name: "Tokyo", country: "Japan" },
   { id: 4, name: "Bali", country: "Indonesia" },
   { id: 5, name: "New York", country: "United States" },
+  { id: 6, name: "Barcelona", country: "Spain" },
   { id: 7, name: "London", country: "United Kingdom" },
+  { id: 8, name: "Bangkok", country: "Thailand" },
+  { id: 9, name: "Istanbul", country: "Turkey" },
   { id: 10, name: "Dubai", country: "United Arab Emirates" },
+  { id: 11, name: "Singapore", country: "Singapore" },
+  { id: 12, name: "Amsterdam", country: "Netherlands" },
 ];
 
 const ITEMS_PER_PAGE = 6;
