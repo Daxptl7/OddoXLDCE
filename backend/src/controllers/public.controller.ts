@@ -3,6 +3,7 @@ import { prisma } from '../lib/prisma.js';
 import { getTripBudget } from '../services/budget.service.js';
 import { buildItinerary } from '../services/itinerary.service.js';
 import { serializeTrip } from '../services/serializers.js';
+import { copyTripForUser } from '../services/trip-copy.service.js';
 import { tripDeepInclude } from '../services/trip.service.js';
 import { ApiError } from '../utils/ApiError.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
@@ -33,4 +34,18 @@ export const getPublicTrip = asyncHandler(async (req: Request, res: Response) =>
     budget,
     readOnly: true,
   });
+});
+
+export const copyPublicTrip = asyncHandler(async (req: Request, res: Response) => {
+  const source = await prisma.trip.findUnique({
+    where: { shareSlug: req.params.slug as string },
+    select: { id: true, isPublic: true },
+  });
+
+  if (!source || !source.isPublic) throw ApiError.notFound('This trip is not shared');
+
+  const result = await copyTripForUser(source.id, req.user!.id);
+  if (!result) throw ApiError.notFound('This trip is not shared');
+
+  res.status(201).json({ trip: result.trip });
 });

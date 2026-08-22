@@ -1,7 +1,9 @@
 import { Router } from 'express';
-import { getPublicTrip } from '../controllers/public.controller.js';
+import { copyPublicTrip, getPublicTrip } from '../controllers/public.controller.js';
+import { requireAuth } from '../middleware/auth.js';
 
 export const publicRouter = Router();
 
-// No requireAuth anywhere on this router — that is the point of it.
+// GET stays unauthenticated: public links must open in incognito.
 publicRouter.get('/:slug', getPublicTrip);
+publicRouter.post('/:slug/copy', requireAuth, copyPublicTrip);

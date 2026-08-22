@@ -18,6 +18,8 @@ export interface Env {
   jwtExpiresIn: string;
   corsOrigins: string[];
   publicAppUrl: string;
+  openaiApiKey?: string;
+  openaiModel: string;
   readonly isProd: boolean;
 }
 
@@ -32,6 +34,8 @@ export const env: Env = {
     .map((origin) => origin.trim())
     .filter(Boolean),
   publicAppUrl: process.env.PUBLIC_APP_URL ?? 'http://localhost:5173',
+  openaiApiKey: process.env.OPENAI_API_KEY,
+  openaiModel: process.env.OPENAI_MODEL ?? 'gpt-5.6-luna',
   get isProd(): boolean {
     return this.nodeEnv === 'production';
   },
