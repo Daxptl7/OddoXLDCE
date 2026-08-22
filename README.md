@@ -6,7 +6,7 @@ each stay, and watch the budget derive itself from the itinerary.
 ```
 OddoxLDCE/
 ├── backend/          Node + Express + Prisma + PostgreSQL  ← built
-├── frontend/         React + Vite + Tailwind               ← structure only, design pending
+├── frontend/         Next.js + TypeScript + Tailwind        ← built
 ├── docs/API.md       endpoint reference
 └── plan.md           the build plan
 ```
@@ -115,5 +115,9 @@ it — `getOwnedTrip`, `getOwnedStop`, `getOwnedStopActivity` in
 
 ## Frontend
 
-Structure and the API client only — the design lands later. See
-`frontend/README.md` and `docs/API.md`.
+Next.js (App Router) + TypeScript, talking to the API above via a typed client
+and TanStack Query. Auth, dashboard, trip CRUD, the itinerary builder
+(add/reorder stops, attach activities), the derived budget with charts, the
+itinerary/calendar view, and the public share page are all built. See
+`frontend/README.md` for the full layout and how to run it, and `docs/API.md`
+for the endpoint reference it's built against.
