@@ -1,16 +1,17 @@
+import type { Request, Response, NextFunction } from 'express';
 import { prisma } from '../lib/prisma.js';
 import { ApiError } from '../utils/ApiError.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { SESSION_COOKIE, verifyToken } from '../utils/auth.js';
 
-function readToken(req) {
+function readToken(req: Request): string | null {
   const header = req.headers.authorization;
   if (header?.startsWith('Bearer ')) return header.slice(7);
   return req.cookies?.[SESSION_COOKIE] ?? null;
 }
 
 /** Attaches req.user, or 401s. Accepts the session cookie or a bearer token. */
-export const requireAuth = asyncHandler(async (req, _res, next) => {
+export const requireAuth = asyncHandler(async (req: Request, _res: Response, next: NextFunction) => {
   const token = readToken(req);
   if (!token) throw ApiError.unauthorized();
 

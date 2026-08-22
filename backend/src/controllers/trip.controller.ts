@@ -1,3 +1,4 @@
+import type { Request, Response } from 'express';
 import { prisma } from '../lib/prisma.js';
 import { getTripBudget } from '../services/budget.service.js';
 import { buildItinerary } from '../services/itinerary.service.js';
@@ -9,15 +10,15 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 import { generateShareSlug } from '../utils/auth.js';
 import { toDateOnly } from '../utils/dates.js';
 
-const shareUrl = (slug) => `${env.publicAppUrl.replace(/\/$/, '')}/t/${slug}`;
+const shareUrl = (slug: string): string => `${env.publicAppUrl.replace(/\/$/, '')}/t/${slug}`;
 
-export const listTrips = asyncHandler(async (req, res) => {
-  const { q, scope, limit, offset } = req.validatedQuery;
+export const listTrips = asyncHandler(async (req: Request, res: Response) => {
+  const { q, scope, limit, offset } = req.validatedQuery as Record<string, unknown>;
   const today = toDateOnly(new Date());
 
   const where = {
-    userId: req.user.id,
-    ...(q ? { name: { contains: q, mode: 'insensitive' } } : {}),
+    userId: req.user!.id,
+    ...(q ? { name: { contains: q as string, mode: 'insensitive' as const } } : {}),
     ...(scope === 'upcoming' ? { endDate: { gte: today } } : {}),
     ...(scope === 'past' ? { endDate: { lt: today } } : {}),
   };
@@ -26,8 +27,8 @@ export const listTrips = asyncHandler(async (req, res) => {
     prisma.trip.findMany({
       where,
       orderBy: [{ startDate: 'desc' }, { id: 'desc' }],
-      take: limit,
-      skip: offset,
+      take: limit as number,
+      skip: offset as number,
       include: { _count: { select: { stops: true } } },
     }),
     prisma.trip.count({ where }),
@@ -41,7 +42,7 @@ export const listTrips = asyncHandler(async (req, res) => {
   });
 });
 
-export const createTrip = asyncHandler(async (req, res) => {
+export const createTrip = asyncHandler(async (req: Request, res: Response) => {
   const { startDate, endDate, ...rest } = req.body;
 
   const trip = await prisma.trip.create({
@@ -49,7 +50,7 @@ export const createTrip = asyncHandler(async (req, res) => {
       ...rest,
       startDate: toDateOnly(startDate),
       endDate: toDateOnly(endDate),
-      userId: req.user.id,
+      userId: req.user!.id,
     },
   });
 
@@ -57,18 +58,20 @@ export const createTrip = asyncHandler(async (req, res) => {
 });
 
 /** The deep read: stops + cities + activities in one fetch, plus derived extras. */
-export const getTrip = asyncHandler(async (req, res) => {
-  const trip = await getOwnedTrip(req.params.id, req.user.id, { deep: true });
+export const getTrip = asyncHandler(async (req: Request, res: Response) => {
+  const trip = await getOwnedTrip(Number(req.params.id), req.user!.id, { deep: true });
 
+  // deep=true guarantees stops are included; cast to satisfy serializer types
+  const deepTrip = trip as any;
   res.json({
-    trip: serializeTrip(trip),
-    warnings: buildTripWarnings(trip, trip.stops),
+    trip: serializeTrip(deepTrip),
+    warnings: buildTripWarnings(trip, deepTrip.stops),
     shareUrl: trip.shareSlug ? shareUrl(trip.shareSlug) : null,
   });
 });
 
-export const updateTrip = asyncHandler(async (req, res) => {
-  const existing = await getOwnedTrip(req.params.id, req.user.id);
+export const updateTrip = asyncHandler(async (req: Request, res: Response) => {
+  const existing = await getOwnedTrip(Number(req.params.id), req.user!.id);
   const { startDate, endDate, isPublic, ...rest } = req.body;
 
   const nextStart = startDate ? toDateOnly(startDate) : existing.startDate;
@@ -92,26 +95,26 @@ export const updateTrip = asyncHandler(async (req, res) => {
   res.json({ trip: serializeTrip(trip, { includeStops: false }) });
 });
 
-export const deleteTrip = asyncHandler(async (req, res) => {
-  const trip = await getOwnedTrip(req.params.id, req.user.id);
+export const deleteTrip = asyncHandler(async (req: Request, res: Response) => {
+  const trip = await getOwnedTrip(Number(req.params.id), req.user!.id);
   await prisma.trip.delete({ where: { id: trip.id } });
   res.json({ ok: true, deletedId: trip.id });
 });
 
 /** Derived budget — never a stored total. */
-export const getBudget = asyncHandler(async (req, res) => {
-  const trip = await getOwnedTrip(req.params.id, req.user.id);
+export const getBudget = asyncHandler(async (req: Request, res: Response) => {
+  const trip = await getOwnedTrip(Number(req.params.id), req.user!.id);
   res.json({ budget: await getTripBudget(trip) });
 });
 
-export const getItinerary = asyncHandler(async (req, res) => {
-  const trip = await getOwnedTrip(req.params.id, req.user.id, { deep: true });
-  res.json({ itinerary: buildItinerary(trip) });
+export const getItinerary = asyncHandler(async (req: Request, res: Response) => {
+  const trip = await getOwnedTrip(Number(req.params.id), req.user!.id, { deep: true });
+  res.json({ itinerary: buildItinerary(trip as any) });
 });
 
 /** Generates the share slug once and reuses it, so a shared link never goes dead. */
-export const shareTrip = asyncHandler(async (req, res) => {
-  const existing = await getOwnedTrip(req.params.id, req.user.id);
+export const shareTrip = asyncHandler(async (req: Request, res: Response) => {
+  const existing = await getOwnedTrip(Number(req.params.id), req.user!.id);
 
   const trip = await prisma.trip.update({
     where: { id: existing.id },
@@ -121,29 +124,29 @@ export const shareTrip = asyncHandler(async (req, res) => {
     },
   });
 
-  res.json({ shareSlug: trip.shareSlug, shareUrl: shareUrl(trip.shareSlug), isPublic: true });
+  res.json({ shareSlug: trip.shareSlug, shareUrl: shareUrl(trip.shareSlug!), isPublic: true });
 });
 
-export const unshareTrip = asyncHandler(async (req, res) => {
-  const existing = await getOwnedTrip(req.params.id, req.user.id);
+export const unshareTrip = asyncHandler(async (req: Request, res: Response) => {
+  const existing = await getOwnedTrip(Number(req.params.id), req.user!.id);
   await prisma.trip.update({ where: { id: existing.id }, data: { isPublic: false } });
   res.json({ ok: true, isPublic: false });
 });
 
 /** Duplicates a trip with all its stops and activities — powers "Copy this trip". */
-export const copyTrip = asyncHandler(async (req, res) => {
+export const copyTrip = asyncHandler(async (req: Request, res: Response) => {
   const source = await prisma.trip.findUnique({
-    where: { id: req.params.id },
+    where: { id: Number(req.params.id) },
     include: tripDeepInclude,
   });
   if (!source) throw ApiError.notFound('Trip not found');
-  if (source.userId !== req.user.id && !source.isPublic) {
+  if (source.userId !== req.user!.id && !source.isPublic) {
     throw ApiError.forbidden('This trip is not shared with you');
   }
 
   const copy = await prisma.trip.create({
     data: {
-      userId: req.user.id,
+      userId: req.user!.id,
       name: `${source.name} (copy)`,
       description: source.description,
       startDate: source.startDate,

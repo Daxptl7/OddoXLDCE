@@ -1,6 +1,8 @@
+import type { Trip } from '@prisma/client';
 import { prisma } from '../lib/prisma.js';
 import { daysBetween } from '../utils/dates.js';
 import { round2, toNumber } from '../utils/money.js';
+import type { BudgetBreakdownRow, BudgetCategoryRow, BudgetHealth, TripBudget } from '../types/index.js';
 
 /**
  * The database showpiece: one query, four tables, produces the whole cost
@@ -44,10 +46,10 @@ const CATEGORY_SQL = `
   ORDER BY total DESC
 `;
 
-export async function getTripBudget(trip) {
+export async function getTripBudget(trip: Trip): Promise<TripBudget> {
   const [rows, categoryRows] = await Promise.all([
-    prisma.$queryRawUnsafe(BREAKDOWN_SQL, trip.id),
-    prisma.$queryRawUnsafe(CATEGORY_SQL, trip.id),
+    prisma.$queryRawUnsafe<BudgetBreakdownRow[]>(BREAKDOWN_SQL, trip.id),
+    prisma.$queryRawUnsafe<BudgetCategoryRow[]>(CATEGORY_SQL, trip.id),
   ]);
 
   const byStop = rows.map((row) => {
@@ -110,12 +112,12 @@ export async function getTripBudget(trip) {
 }
 
 /** Budget health bar: green under 75%, amber to 100%, red over. */
-function buildBudgetHealth(spent, targetBudget) {
+function buildBudgetHealth(spent: number, targetBudget: number | null): BudgetHealth {
   if (!targetBudget || targetBudget <= 0) {
     return { budget: null, spent, remaining: null, percentUsed: null, status: 'unset' };
   }
   const percentUsed = round2((spent / targetBudget) * 100);
-  const status = percentUsed > 100 ? 'over' : percentUsed >= 75 ? 'warning' : 'healthy';
+  const status: BudgetHealth['status'] = percentUsed > 100 ? 'over' : percentUsed >= 75 ? 'warning' : 'healthy';
   return {
     budget: round2(targetBudget),
     spent,

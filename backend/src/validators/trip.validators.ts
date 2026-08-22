@@ -10,7 +10,7 @@ const base = {
   targetBudget: money.nullable().optional(),
 };
 
-const endsAfterStart = (data) =>
+const endsAfterStart = (data: { startDate?: string; endDate?: string }): boolean =>
   !data.startDate || !data.endDate || data.endDate >= data.startDate;
 
 export const createTripSchema = z
@@ -36,3 +36,7 @@ export const listTripsSchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(50),
   offset: z.coerce.number().int().min(0).default(0),
 });
+
+export type CreateTripInput = z.infer<typeof createTripSchema>;
+export type UpdateTripInput = z.infer<typeof updateTripSchema>;
+export type ListTripsInput = z.infer<typeof listTripsSchema>;

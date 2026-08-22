@@ -18,3 +18,6 @@ export const activitySearchSchema = z.object({
   sort: z.enum(['cost', 'name', 'duration']).default('cost'),
   ...pagination,
 });
+
+export type CitySearchInput = z.infer<typeof citySearchSchema>;
+export type ActivitySearchInput = z.infer<typeof activitySearchSchema>;

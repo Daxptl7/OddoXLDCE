@@ -1,3 +1,4 @@
+import type { Request, Response } from 'express';
 import { prisma } from '../lib/prisma.js';
 import { getTripBudget } from '../services/budget.service.js';
 import { buildItinerary } from '../services/itinerary.service.js';
@@ -10,9 +11,9 @@ import { asyncHandler } from '../utils/asyncHandler.js';
  * NO AUTH. Read-only. Reached by random slug, never by trip id, and only while
  * the owner has sharing switched on.
  */
-export const getPublicTrip = asyncHandler(async (req, res) => {
+export const getPublicTrip = asyncHandler(async (req: Request, res: Response) => {
   const trip = await prisma.trip.findUnique({
-    where: { shareSlug: req.params.slug },
+    where: { shareSlug: req.params.slug as string },
     include: { ...tripDeepInclude, user: { select: { name: true, photoUrl: true } } },
   });
 

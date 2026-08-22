@@ -18,3 +18,7 @@ export const updateProfileSchema = z
     photoUrl: z.string().url().max(500).nullable().optional(),
   })
   .refine((data) => Object.keys(data).length > 0, { message: 'Nothing to update' });
+
+export type SignupInput = z.infer<typeof signupSchema>;
+export type LoginInput = z.infer<typeof loginSchema>;
+export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;

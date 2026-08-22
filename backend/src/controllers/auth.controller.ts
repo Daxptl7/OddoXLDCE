@@ -1,3 +1,4 @@
+import type { Request, Response } from 'express';
 import { prisma } from '../lib/prisma.js';
 import { serializeUser } from '../services/serializers.js';
 import { ApiError } from '../utils/ApiError.js';
@@ -10,7 +11,7 @@ import {
   verifyPassword,
 } from '../utils/auth.js';
 
-export const signup = asyncHandler(async (req, res) => {
+export const signup = asyncHandler(async (req: Request, res: Response) => {
   const { name, email, password, photoUrl } = req.body;
 
   const existing = await prisma.user.findUnique({ where: { email } });
@@ -25,7 +26,7 @@ export const signup = asyncHandler(async (req, res) => {
   res.status(201).json({ user: serializeUser(user), token });
 });
 
-export const login = asyncHandler(async (req, res) => {
+export const login = asyncHandler(async (req: Request, res: Response) => {
   const { email, password } = req.body;
 
   const user = await prisma.user.findUnique({ where: { email } });
@@ -39,16 +40,16 @@ export const login = asyncHandler(async (req, res) => {
   res.json({ user: serializeUser(user), token });
 });
 
-export const logout = asyncHandler(async (_req, res) => {
+export const logout = asyncHandler(async (_req: Request, res: Response) => {
   res.clearCookie(SESSION_COOKIE, { ...cookieOptions, maxAge: undefined });
   res.json({ ok: true });
 });
 
-export const me = asyncHandler(async (req, res) => {
-  res.json({ user: serializeUser(req.user) });
+export const me = asyncHandler(async (req: Request, res: Response) => {
+  res.json({ user: serializeUser(req.user!) });
 });
 
-export const updateProfile = asyncHandler(async (req, res) => {
-  const user = await prisma.user.update({ where: { id: req.user.id }, data: req.body });
+export const updateProfile = asyncHandler(async (req: Request, res: Response) => {
+  const user = await prisma.user.update({ where: { id: req.user!.id }, data: req.body });
   res.json({ user: serializeUser(user) });
 });

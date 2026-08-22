@@ -1,3 +1,4 @@
+import type { Request, Response } from 'express';
 import { prisma } from '../lib/prisma.js';
 import { serializeStop, serializeStopActivity } from '../services/serializers.js';
 import {
@@ -14,13 +15,17 @@ import { daysBetween, toDateOnly } from '../utils/dates.js';
 const stopInclude = {
   city: true,
   activities: {
-    orderBy: [{ scheduledDate: 'asc' }, { scheduledTime: 'asc' }, { id: 'asc' }],
+    orderBy: [
+      { scheduledDate: 'asc' as const },
+      { scheduledTime: 'asc' as const },
+      { id: 'asc' as const },
+    ],
     include: { activity: true },
   },
 };
 
-export const listStops = asyncHandler(async (req, res) => {
-  const trip = await getOwnedTrip(req.params.id, req.user.id);
+export const listStops = asyncHandler(async (req: Request, res: Response) => {
+  const trip = await getOwnedTrip(Number(req.params.id), req.user!.id);
   const stops = await prisma.tripStop.findMany({
     where: { tripId: trip.id },
     orderBy: { sortOrder: 'asc' },
@@ -29,8 +34,8 @@ export const listStops = asyncHandler(async (req, res) => {
   res.json({ stops: stops.map(serializeStop) });
 });
 
-export const addStop = asyncHandler(async (req, res) => {
-  const trip = await getOwnedTrip(req.params.id, req.user.id);
+export const addStop = asyncHandler(async (req: Request, res: Response) => {
+  const trip = await getOwnedTrip(Number(req.params.id), req.user!.id);
   const { cityId, arrivalDate, departureDate, ...rest } = req.body;
 
   const city = await prisma.city.findUnique({ where: { id: cityId } });
@@ -51,8 +56,8 @@ export const addStop = asyncHandler(async (req, res) => {
   res.status(201).json({ stop: serializeStop(stop) });
 });
 
-export const updateStop = asyncHandler(async (req, res) => {
-  const existing = await getOwnedStop(req.params.stopId, req.user.id);
+export const updateStop = asyncHandler(async (req: Request, res: Response) => {
+  const existing = await getOwnedStop(Number(req.params.stopId), req.user!.id);
   const { arrivalDate, departureDate, ...rest } = req.body;
 
   const nextArrival = arrivalDate ? toDateOnly(arrivalDate) : existing.arrivalDate;
@@ -74,17 +79,17 @@ export const updateStop = asyncHandler(async (req, res) => {
     return tx.tripStop.findUnique({ where: { id: existing.id }, include: stopInclude });
   });
 
-  res.json({ stop: serializeStop(stop) });
+  res.json({ stop: serializeStop(stop!) });
 });
 
-export const deleteStop = asyncHandler(async (req, res) => {
-  const stop = await getOwnedStop(req.params.stopId, req.user.id);
+export const deleteStop = asyncHandler(async (req: Request, res: Response) => {
+  const stop = await getOwnedStop(Number(req.params.stopId), req.user!.id);
   await prisma.tripStop.delete({ where: { id: stop.id } });
   res.json({ ok: true, deletedId: stop.id });
 });
 
-export const reorder = asyncHandler(async (req, res) => {
-  const trip = await getOwnedTrip(req.params.id, req.user.id);
+export const reorder = asyncHandler(async (req: Request, res: Response) => {
+  const trip = await getOwnedTrip(Number(req.params.id), req.user!.id);
   const orderedIds = readOrderPayload(req.body);
   const keepDates = req.query.keepDates === 'true';
 
@@ -92,8 +97,8 @@ export const reorder = asyncHandler(async (req, res) => {
   res.json({ stops: stops.map(serializeStop), datesReflowed: !keepDates });
 });
 
-export const addActivityToStop = asyncHandler(async (req, res) => {
-  const stop = await getOwnedStop(req.params.stopId, req.user.id);
+export const addActivityToStop = asyncHandler(async (req: Request, res: Response) => {
+  const stop = await getOwnedStop(Number(req.params.stopId), req.user!.id);
   const { activityId, scheduledDate, ...rest } = req.body;
 
   const activity = await prisma.activity.findUnique({ where: { id: activityId } });
@@ -127,7 +132,7 @@ export const addActivityToStop = asyncHandler(async (req, res) => {
 });
 
 /** Loads a stop_activities row and proves the caller owns the trip behind it. */
-async function getOwnedStopActivity(id, userId) {
+async function getOwnedStopActivity(id: number | string, userId: number) {
   const link = await prisma.stopActivity.findUnique({
     where: { id: Number(id) },
     include: { activity: true, tripStop: { include: { trip: { select: { userId: true } } } } },
@@ -137,8 +142,8 @@ async function getOwnedStopActivity(id, userId) {
   return link;
 }
 
-export const updateStopActivity = asyncHandler(async (req, res) => {
-  const existing = await getOwnedStopActivity(req.params.id, req.user.id);
+export const updateStopActivity = asyncHandler(async (req: Request, res: Response) => {
+  const existing = await getOwnedStopActivity(req.params.id as string, req.user!.id);
   const { scheduledDate, ...rest } = req.body;
 
   const link = await prisma.stopActivity.update({
@@ -155,8 +160,8 @@ export const updateStopActivity = asyncHandler(async (req, res) => {
   res.json({ stopActivity: serializeStopActivity(link) });
 });
 
-export const removeStopActivity = asyncHandler(async (req, res) => {
-  const link = await getOwnedStopActivity(req.params.id, req.user.id);
+export const removeStopActivity = asyncHandler(async (req: Request, res: Response) => {
+  const link = await getOwnedStopActivity(req.params.id as string, req.user!.id);
   await prisma.stopActivity.delete({ where: { id: link.id } });
   res.json({ ok: true, deletedId: link.id });
 });

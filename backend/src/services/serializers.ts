@@ -1,7 +1,18 @@
+import type { User, City, Activity, TripStop, StopActivity, Trip } from '@prisma/client';
 import { formatDateOnly, nightsBetween } from '../utils/dates.js';
 import { round2, toNumber } from '../utils/money.js';
+import type {
+  SerializedUser,
+  SerializedCity,
+  SerializedActivity,
+  SerializedStopActivity,
+  SerializedStop,
+  SerializedTrip,
+} from '../types/index.js';
 
-export const serializeUser = (user) => ({
+type UserLike = Pick<User, 'id' | 'name' | 'email' | 'photoUrl' | 'createdAt'>;
+
+export const serializeUser = (user: UserLike): SerializedUser => ({
   id: user.id,
   name: user.name,
   email: user.email,
@@ -9,7 +20,9 @@ export const serializeUser = (user) => ({
   createdAt: user.createdAt,
 });
 
-export const serializeCity = (city) =>
+type CityLike = Pick<City, 'id' | 'name' | 'country' | 'region' | 'costIndex' | 'popularity' | 'imageUrl' | 'latitude' | 'longitude'>;
+
+export const serializeCity = (city: CityLike): SerializedCity =>
   city && {
     id: city.id,
     name: city.name,
@@ -22,7 +35,9 @@ export const serializeCity = (city) =>
     longitude: city.longitude ?? null,
   };
 
-export const serializeActivity = (activity) =>
+type ActivityLike = Activity & { city?: CityLike };
+
+export const serializeActivity = (activity: ActivityLike): SerializedActivity =>
   activity && {
     id: activity.id,
     cityId: activity.cityId,
@@ -35,7 +50,9 @@ export const serializeActivity = (activity) =>
     ...(activity.city ? { city: serializeCity(activity.city) } : {}),
   };
 
-export const serializeStopActivity = (link) => ({
+type StopActivityLike = StopActivity & { activity?: ActivityLike };
+
+export const serializeStopActivity = (link: StopActivityLike): SerializedStopActivity => ({
   id: link.id,
   tripStopId: link.tripStopId,
   activityId: link.activityId,
@@ -43,11 +60,13 @@ export const serializeStopActivity = (link) => ({
   scheduledTime: link.scheduledTime ?? null,
   customCost: toNumber(link.customCost),
   // What this actually costs the trip: the override when set, else the catalogue price.
-  cost: toNumber(link.customCost ?? link.activity?.estimatedCost ?? 0),
+  cost: toNumber(link.customCost ?? link.activity?.estimatedCost ?? 0) ?? 0,
   activity: link.activity ? serializeActivity(link.activity) : undefined,
 });
 
-export const serializeStop = (stop) => {
+type StopLike = TripStop & { city?: CityLike; activities?: StopActivityLike[] };
+
+export const serializeStop = (stop: StopLike): SerializedStop => {
   const activities = (stop.activities ?? []).map(serializeStopActivity);
   const activityCost = round2(activities.reduce((sum, item) => sum + (item.cost ?? 0), 0));
   const transportCost = toNumber(stop.transportCost) ?? 0;
@@ -71,7 +90,13 @@ export const serializeStop = (stop) => {
   };
 };
 
-export const serializeTrip = (trip, { includeStops = true } = {}) => {
+type TripLike = Trip & {
+  stops?: StopLike[];
+  _count?: { stops: number };
+  user?: { name: string; photoUrl: string | null };
+};
+
+export const serializeTrip = (trip: TripLike, { includeStops = true } = {}): SerializedTrip => {
   const stops = includeStops && trip.stops ? trip.stops.map(serializeStop) : undefined;
 
   return {

@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { dateOnly, money, timeOnly } from './common.js';
 
-const datesOrdered = (data) =>
+const datesOrdered = (data: { arrivalDate?: string; departureDate?: string }): boolean =>
   !data.arrivalDate || !data.departureDate || data.departureDate >= data.arrivalDate;
 
 export const createStopSchema = z
@@ -74,3 +74,8 @@ export const updateStopActivitySchema = z
     customCost: money.nullable().optional(),
   })
   .refine((data) => Object.keys(data).length > 0, { message: 'Nothing to update' });
+
+export type CreateStopInput = z.infer<typeof createStopSchema>;
+export type UpdateStopInput = z.infer<typeof updateStopSchema>;
+export type AddStopActivityInput = z.infer<typeof addStopActivitySchema>;
+export type UpdateStopActivityInput = z.infer<typeof updateStopActivitySchema>;

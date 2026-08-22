@@ -1,6 +1,6 @@
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
-import express from 'express';
+import express, { type Express, type Request, type Response } from 'express';
 import rateLimit from 'express-rate-limit';
 import helmet from 'helmet';
 import morgan from 'morgan';
@@ -8,7 +8,7 @@ import { env } from './config/env.js';
 import { errorHandler, notFoundHandler } from './middleware/error.js';
 import { apiRouter } from './routes/index.js';
 
-export function createApp() {
+export function createApp(): Express {
   const app = express();
 
   app.set('trust proxy', 1);
@@ -32,7 +32,7 @@ export function createApp() {
   app.use(morgan(env.isProd ? 'combined' : 'dev'));
   app.use(rateLimit({ windowMs: 60 * 1000, limit: 300, standardHeaders: true, legacyHeaders: false }));
 
-  app.get('/', (_req, res) =>
+  app.get('/', (_req: Request, res: Response) =>
     res.json({ service: 'globetrotter-api', docs: '/api/health', version: 1 }),
   );
   app.use('/api', apiRouter);

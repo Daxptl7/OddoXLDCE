@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import type { Request, Response } from 'express';
 import { authRouter } from './auth.routes.js';
 import { activityRouter, cityRouter } from './catalogue.routes.js';
 import { dashboardRouter } from './dashboard.routes.js';
@@ -8,7 +9,7 @@ import { tripRouter } from './trip.routes.js';
 
 export const apiRouter = Router();
 
-apiRouter.get('/health', (_req, res) => res.json({ ok: true, service: 'globetrotter-api' }));
+apiRouter.get('/health', (_req: Request, res: Response) => res.json({ ok: true, service: 'globetrotter-api' }));
 
 apiRouter.use('/auth', authRouter);
 apiRouter.use('/dashboard', dashboardRouter);

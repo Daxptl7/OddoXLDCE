@@ -2,7 +2,7 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-function required(key) {
+function required(key: string): string {
   const value = process.env[key];
   if (!value) {
     throw new Error(`Missing required environment variable: ${key}. Copy .env.example to .env.`);
@@ -10,7 +10,18 @@ function required(key) {
   return value;
 }
 
-export const env = {
+export interface Env {
+  nodeEnv: string;
+  port: number;
+  databaseUrl: string;
+  jwtSecret: string;
+  jwtExpiresIn: string;
+  corsOrigins: string[];
+  publicAppUrl: string;
+  readonly isProd: boolean;
+}
+
+export const env: Env = {
   nodeEnv: process.env.NODE_ENV ?? 'development',
   port: Number(process.env.PORT ?? 4000),
   databaseUrl: required('DATABASE_URL'),
@@ -21,7 +32,7 @@ export const env = {
     .map((origin) => origin.trim())
     .filter(Boolean),
   publicAppUrl: process.env.PUBLIC_APP_URL ?? 'http://localhost:5173',
-  get isProd() {
+  get isProd(): boolean {
     return this.nodeEnv === 'production';
   },
 };

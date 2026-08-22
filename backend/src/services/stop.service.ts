@@ -1,11 +1,14 @@
+import type { PrismaClient, TripStop } from '@prisma/client';
 import { prisma } from '../lib/prisma.js';
 import { ApiError } from '../utils/ApiError.js';
 import { addDays, daysBetween, nightsBetween, toDateOnly } from '../utils/dates.js';
 
+type TransactionClient = Parameters<Parameters<PrismaClient['$transaction']>[0]>[0];
+
 /** Gaps of 10 so a stop can be inserted between two others without renumbering. */
 export const SORT_GAP = 10;
 
-export async function nextSortOrder(tripId, client = prisma) {
+export async function nextSortOrder(tripId: number, client: PrismaClient | TransactionClient = prisma): Promise<number> {
   const last = await client.tripStop.findFirst({
     where: { tripId },
     orderBy: { sortOrder: 'desc' },
@@ -18,14 +21,15 @@ export async function nextSortOrder(tripId, client = prisma) {
  * Normalises the request body of PATCH /trips/:id/stops/reorder into a list of
  * stop ids in their new left-to-right order.
  */
-export function readOrderPayload(body) {
+export function readOrderPayload(body: unknown): number[] {
   if (Array.isArray(body)) {
-    return [...body].sort((a, b) => a.sortOrder - b.sortOrder).map((entry) => entry.stopId);
+    return [...body].sort((a: { sortOrder: number }, b: { sortOrder: number }) => a.sortOrder - b.sortOrder).map((entry: { stopId: number }) => entry.stopId);
   }
-  if (Array.isArray(body?.stops)) {
-    return [...body.stops].sort((a, b) => a.sortOrder - b.sortOrder).map((entry) => entry.stopId);
+  const obj = body as Record<string, unknown>;
+  if (Array.isArray(obj?.stops)) {
+    return [...obj.stops].sort((a: { sortOrder: number }, b: { sortOrder: number }) => a.sortOrder - b.sortOrder).map((entry: { stopId: number }) => entry.stopId);
   }
-  return body.order;
+  return (obj as { order: number[] }).order;
 }
 
 /**
@@ -34,7 +38,11 @@ export function readOrderPayload(body) {
  * never leave the itinerary with dates that contradict the order. Pass
  * keepDates:true to move the cards only and leave every date untouched.
  */
-export async function reorderStops(tripId, orderedStopIds, { keepDates = false } = {}) {
+export async function reorderStops(
+  tripId: number,
+  orderedStopIds: number[],
+  { keepDates = false } = {},
+) {
   return prisma.$transaction(async (tx) => {
     const stops = await tx.tripStop.findMany({
       where: { tripId },
@@ -44,7 +52,7 @@ export async function reorderStops(tripId, orderedStopIds, { keepDates = false }
     if (stops.length === 0) throw ApiError.badRequest('This trip has no stops to reorder');
 
     const known = new Set(stops.map((stop) => stop.id));
-    const seen = new Set();
+    const seen = new Set<number>();
     for (const id of orderedStopIds) {
       if (!known.has(id)) throw ApiError.badRequest(`Stop ${id} is not part of this trip`);
       if (seen.has(id)) throw ApiError.badRequest(`Stop ${id} was listed twice`);
@@ -73,11 +81,18 @@ export async function reorderStops(tripId, orderedStopIds, { keepDates = false }
     }
 
     // Phase 2: write the final positions, re-flowing dates unless asked not to.
-    let cursor = toDateOnly(trip.startDate);
-    const shifts = [];
+    let cursor = toDateOnly(trip!.startDate);
+    const shifts: Array<{
+      stop: TripStop;
+      delta: number;
+      arrivalDate: Date;
+      departureDate: Date;
+    }> = [];
     for (const [index, stopId] of orderedStopIds.entries()) {
-      const stop = byId.get(stopId);
-      const data = { sortOrder: (index + 1) * SORT_GAP };
+      const stop = byId.get(stopId)!;
+      const data: { sortOrder: number; arrivalDate?: Date; departureDate?: Date } = {
+        sortOrder: (index + 1) * SORT_GAP,
+      };
 
       if (!keepDates) {
         const nights = nightsBetween(stop.arrivalDate, stop.departureDate);
@@ -123,18 +138,24 @@ export async function reorderStops(tripId, orderedStopIds, { keepDates = false }
  * window is clamped back into it — a stop's activities can never sit on a day
  * that belongs to another city.
  */
-export async function shiftStopActivities(tx, stop, deltaDays, arrivalDate, departureDate) {
+export async function shiftStopActivities(
+  tx: TransactionClient,
+  stop: TripStop,
+  deltaDays: number,
+  arrivalDate: Date,
+  departureDate: Date,
+): Promise<void> {
   const links = await tx.stopActivity.findMany({
     where: { tripStopId: stop.id, scheduledDate: { not: null } },
     select: { id: true, scheduledDate: true },
   });
 
   for (const link of links) {
-    let next = addDays(link.scheduledDate, deltaDays);
+    let next = addDays(link.scheduledDate!, deltaDays);
     if (next < arrivalDate) next = toDateOnly(arrivalDate);
     if (next > departureDate) next = toDateOnly(departureDate);
 
-    if (next.getTime() !== toDateOnly(link.scheduledDate).getTime()) {
+    if (next.getTime() !== toDateOnly(link.scheduledDate!).getTime()) {
       await tx.stopActivity.update({ where: { id: link.id }, data: { scheduledDate: next } });
     }
   }
