@@ -74,8 +74,8 @@ export function CreateTripModal({ open, onClose }: { open: boolean; onClose: () 
           label="Target budget (optional)"
           type="number"
           min={0}
-          step="0.01"
-          placeholder="2500"
+          step="1"
+          placeholder="150000"
           error={errors.targetBudget?.message}
           {...register("targetBudget")}
         />

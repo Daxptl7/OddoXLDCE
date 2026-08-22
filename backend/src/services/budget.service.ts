@@ -86,7 +86,7 @@ export async function getTripBudget(trip: Trip): Promise<TripBudget> {
 
   return {
     tripId: trip.id,
-    currency: 'USD',
+    currency: 'INR',
     totals: {
       transport: round2(totals.transport),
       accommodation: round2(totals.accommodation),

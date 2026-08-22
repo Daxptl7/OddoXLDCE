@@ -80,7 +80,7 @@ async function seedDemoTrip() {
       description: 'Two cities, seven days, one budget that has to hold.',
       startDate: date('2026-06-01'),
       endDate: date('2026-06-08'),
-      targetBudget: 2500,
+      targetBudget: 200000,
       coverPhotoUrl: 'https://picsum.photos/seed/europe-summer/1200/600',
       stops: {
         create: [
@@ -89,8 +89,8 @@ async function seedDemoTrip() {
             arrivalDate: date('2026-06-01'),
             departureDate: date('2026-06-04'),
             sortOrder: 10,
-            transportCost: 220,
-            accommodationCost: 480,
+            transportCost: 18000,
+            accommodationCost: 36000,
             notes: 'Hotel in the 11th, walkable to everything.',
           },
           {
@@ -98,8 +98,8 @@ async function seedDemoTrip() {
             arrivalDate: date('2026-06-04'),
             departureDate: date('2026-06-08'),
             sortOrder: 20,
-            transportCost: 140,
-            accommodationCost: 520,
+            transportCost: 12000,
+            accommodationCost: 32000,
             notes: 'Night train from Paris.',
           },
         ],

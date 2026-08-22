@@ -21,6 +21,123 @@ const categoryForInterest = (interest: string): string | null => {
 type CandidateCity = Awaited<ReturnType<typeof findCandidateCities>>[number];
 type CandidateActivity = Awaited<ReturnType<typeof findCandidateActivities>>;
 
+type SupplementalActivity = [name: string, category: string, estimatedCost: number, durationMinutes: number, description: string];
+
+interface SupplementalCity {
+  aliases: string[];
+  city: {
+    name: string;
+    country: string;
+    region: string;
+    costIndex: number;
+    popularity: number;
+    latitude: number;
+    longitude: number;
+    imageUrl: string;
+  };
+  activities: SupplementalActivity[];
+}
+
+const supplementalCities: SupplementalCity[] = [
+  {
+    aliases: ['kulu', 'kullu', 'himachal', 'himachal pradesh'],
+    city: {
+      name: 'Kullu',
+      country: 'India',
+      region: 'Himachal Pradesh',
+      costIndex: 2,
+      popularity: 76,
+      latitude: 31.9579,
+      longitude: 77.1095,
+      imageUrl: 'https://picsum.photos/seed/kullu/800/600',
+    },
+    activities: [
+      ['Raghunath Temple visit', 'culture', 0, 90, 'A calm heritage stop in central Kullu.'],
+      ['Great Himalayan National Park day hike', 'outdoor', 3500, 360, 'Guided nature walk through cedar forest and mountain viewpoints.'],
+      ['Beas River rafting', 'outdoor', 2500, 150, 'Beginner-friendly rafting on the Beas near Kullu.'],
+      ['Kullu shawl market walk', 'shopping', 0, 90, 'Browse local wool, handicrafts and Himachali souvenirs.'],
+      ['Bijli Mahadev trek', 'outdoor', 1500, 300, 'Ridge walk to a hilltop temple with valley views.'],
+    ],
+  },
+  {
+    aliases: ['manali', 'kulu', 'kullu', 'himachal', 'himachal pradesh'],
+    city: {
+      name: 'Manali',
+      country: 'India',
+      region: 'Himachal Pradesh',
+      costIndex: 2,
+      popularity: 86,
+      latitude: 32.2432,
+      longitude: 77.1892,
+      imageUrl: 'https://picsum.photos/seed/manali/800/600',
+    },
+    activities: [
+      ['Hadimba Devi Temple', 'culture', 0, 75, 'Woodland temple visit in Old Manali.'],
+      ['Solang Valley adventure day', 'outdoor', 3000, 240, 'Cable car, viewpoints and optional adventure activities.'],
+      ['Old Manali cafe walk', 'food', 1800, 120, 'Slow evening through cafes, bakeries and riverside lanes.'],
+      ['Vashisht hot springs', 'culture', 200, 90, 'Temple village and natural hot springs above the Beas.'],
+      ['Atal Tunnel viewpoint drive', 'sightseeing', 4000, 300, 'Scenic drive toward Sissu and high mountain viewpoints.'],
+    ],
+  },
+  {
+    aliases: ['shimla', 'himachal', 'himachal pradesh'],
+    city: {
+      name: 'Shimla',
+      country: 'India',
+      region: 'Himachal Pradesh',
+      costIndex: 2,
+      popularity: 82,
+      latitude: 31.1048,
+      longitude: 77.1734,
+      imageUrl: 'https://picsum.photos/seed/shimla/800/600',
+    },
+    activities: [
+      ['Mall Road and Ridge walk', 'sightseeing', 0, 120, 'Classic Shimla walk past cafes, shops and colonial views.'],
+      ['Jakhu Temple climb', 'culture', 0, 120, 'Hilltop temple walk with sweeping city views.'],
+      ['Viceregal Lodge tour', 'culture', 500, 90, 'Guided visit through a landmark colonial-era building.'],
+      ['Kufri day trip', 'outdoor', 2500, 240, 'Short mountain drive for viewpoints and easy walks.'],
+    ],
+  },
+  {
+    aliases: ['delhi', 'new delhi', 'india'],
+    city: {
+      name: 'Delhi',
+      country: 'India',
+      region: 'North India',
+      costIndex: 2,
+      popularity: 90,
+      latitude: 28.6139,
+      longitude: 77.209,
+      imageUrl: 'https://picsum.photos/seed/delhi/800/600',
+    },
+    activities: [
+      ['Old Delhi food walk', 'food', 2000, 180, 'Chandni Chowk snacks, sweets and lanes with a local guide.'],
+      ['Humayun Tomb and Lodhi Garden', 'culture', 800, 180, 'Mughal architecture and a quiet garden walk.'],
+      ['India Gate and Kartavya Path', 'sightseeing', 0, 90, 'Evening monument walk in central Delhi.'],
+      ['Qutub Minar complex', 'culture', 800, 120, 'UNESCO-listed minaret and ruins in Mehrauli.'],
+    ],
+  },
+  {
+    aliases: ['jaipur', 'rajasthan', 'india'],
+    city: {
+      name: 'Jaipur',
+      country: 'India',
+      region: 'Rajasthan',
+      costIndex: 2,
+      popularity: 88,
+      latitude: 26.9124,
+      longitude: 75.7873,
+      imageUrl: 'https://picsum.photos/seed/jaipur/800/600',
+    },
+    activities: [
+      ['Amber Fort visit', 'culture', 700, 180, 'Hilltop fort with courtyards and city views.'],
+      ['Hawa Mahal photo stop', 'sightseeing', 300, 60, 'Iconic facade in the Pink City.'],
+      ['Johari Bazaar shopping', 'shopping', 0, 120, 'Jewellery, textiles and handicrafts.'],
+      ['Rajasthani thali dinner', 'food', 1800, 90, 'Classic local dinner with dal baati churma.'],
+    ],
+  },
+];
+
 interface GeneratedPlanStop {
   cityId: number;
   suggestedDays: number;
@@ -134,11 +251,60 @@ const generatedScheduleSchema = {
   },
 };
 
+const normalizeSearchText = (value: string): string =>
+  value.toLowerCase().replace(/[^a-z0-9]+/g, ' ').replace(/\s+/g, ' ').trim();
+
+const searchTokens = (value: string): string[] => {
+  const normalized = normalizeSearchText(value);
+  const tokens = normalized
+    .split(' ')
+    .map((token) => token.trim())
+    .filter((token) => token.length >= 3);
+
+  return Array.from(new Set([normalized, ...tokens].filter(Boolean)));
+};
+
+async function ensureSupplementalCities(query: string) {
+  const normalized = normalizeSearchText(query);
+  const matchedSeeds = supplementalCities.filter((seed) =>
+    seed.aliases.some((alias) => normalized.includes(normalizeSearchText(alias))),
+  );
+
+  for (const seed of matchedSeeds) {
+    const city = await prisma.city.upsert({
+      where: { name_country: { name: seed.city.name, country: seed.city.country } },
+      update: seed.city,
+      create: seed.city,
+    });
+
+    for (const [name, category, estimatedCost, durationMinutes, description] of seed.activities) {
+      const existing = await prisma.activity.findFirst({
+        where: { cityId: city.id, name },
+        select: { id: true },
+      });
+      const data = {
+        cityId: city.id,
+        name,
+        category,
+        estimatedCost,
+        durationMinutes,
+        description,
+        imageUrl: `https://picsum.photos/seed/${encodeURIComponent(name.toLowerCase().replace(/\s+/g, '-'))}/600/400`,
+      };
+
+      if (existing) {
+        await prisma.activity.update({ where: { id: existing.id }, data });
+      } else {
+        await prisma.activity.create({ data });
+      }
+    }
+  }
+}
+
 async function findCandidateCities(destinations: string) {
-  const terms = destinations
-    .split(',')
-    .map((term) => term.trim())
-    .filter(Boolean);
+  await ensureSupplementalCities(destinations);
+
+  const terms = searchTokens(destinations);
 
   const matched = await prisma.city.findMany({
     where: {
@@ -152,9 +318,7 @@ async function findCandidateCities(destinations: string) {
     take: 8,
   });
 
-  return matched.length
-    ? matched
-    : prisma.city.findMany({ orderBy: [{ popularity: 'desc' }, { costIndex: 'asc' }], take: 8 });
+  return matched;
 }
 
 async function findCandidateActivities(cityIds: number[], interests: string[], budget?: number) {
@@ -189,7 +353,7 @@ function fallbackPlan(
   const stops = cities.map((city, index) => {
     const activities = candidateActivities.filter((activity) => activity.cityId === city.id).slice(0, 3);
     const activityTotal = activities.reduce((sum, activity) => sum + Number(activity.estimatedCost), 0);
-    const stayEstimate = city.costIndex * 55 * daysPerStop;
+    const stayEstimate = (2500 + city.costIndex * 1500) * daysPerStop;
     return {
       city: serializeCity(city),
       suggestedDays: Math.max(1, index === cities.length - 1 ? input.durationDays - daysPerStop * index : daysPerStop),
@@ -419,7 +583,7 @@ function hydrateGeneratedPlan(input: AiPlanInput, generated: GeneratedPlan, citi
       .slice(0, 4);
 
     const activityTotal = stopActivities.reduce((sum, activity) => sum + Number(activity.estimatedCost), 0);
-    const stayEstimate = city.costIndex * 55 * Math.max(1, Math.round(stop.suggestedDays));
+    const stayEstimate = (2500 + city.costIndex * 1500) * Math.max(1, Math.round(stop.suggestedDays));
     return [{
       city: serializeCity(city),
       suggestedDays: Math.max(1, Math.round(stop.suggestedDays)),
@@ -445,6 +609,15 @@ function hydrateGeneratedPlan(input: AiPlanInput, generated: GeneratedPlan, citi
 export const planTrip = asyncHandler(async (req: Request, res: Response) => {
   const input = req.body as AiPlanInput;
   const cities = await findCandidateCities(input.destinations);
+  if (cities.length === 0) {
+    res.status(400).json({
+      error: {
+        message: `I could not find "${input.destinations}" in the trip catalogue yet. Try a nearby city or add it to the catalogue first.`,
+      },
+    });
+    return;
+  }
+
   const activities = await findCandidateActivities(cities.map((city) => city.id), input.interests, input.budget);
   const generated = await callGroqPlan(input, cities, activities);
   const llmPlan = generated.plan ? hydrateGeneratedPlan(input, generated.plan, cities, activities) : null;
@@ -659,6 +832,15 @@ async function generateSchedule(prompt: string, cities: CandidateCity[], activit
 export const scheduleTrip = asyncHandler(async (req: Request, res: Response) => {
   const { prompt, tripId } = req.body as AiScheduleInput;
   const cities = await findCandidateCities(prompt);
+  if (cities.length === 0) {
+    res.status(400).json({
+      error: {
+        message: 'I could not match that destination to the trip catalogue yet. Try a nearby city or add the destination first.',
+      },
+    });
+    return;
+  }
+
   const activities = await findCandidateActivities(cities.map((city) => city.id), [prompt]);
   const result = await generateSchedule(prompt, cities, activities);
 
