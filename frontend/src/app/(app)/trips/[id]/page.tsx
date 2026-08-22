@@ -6,7 +6,9 @@ import clsx from "clsx";
 import { useTrip } from "@/hooks/useTrip";
 import { useBudget } from "@/hooks/useBudget";
 import { useItinerary } from "@/hooks/useItinerary";
+import { useTripWeather } from "@/hooks/useWeather";
 import { useCopyTrip, useDeleteTrip, useShareTrip, useUnshareTrip } from "@/hooks/useTrip";
+import type { TripWarning } from "@/lib/types";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
@@ -60,6 +62,7 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
   const { data, isLoading, error } = useTrip(tripId);
   const { data: budgetData } = useBudget(tripId);
   const { data: itineraryData } = useItinerary(tripId);
+  const { data: weatherData } = useTripWeather(tripId);
 
   const shareTrip = useShareTrip(tripId);
   const unshareTrip = useUnshareTrip(tripId);
@@ -71,6 +74,17 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
   if (!data) return null;
 
   const { trip, warnings, shareUrl } = data;
+
+  const weatherWarnings: TripWarning[] =
+    weatherData?.stopForecasts
+      ?.filter((s) => s.forecast?.hasAdverseWeather)
+      ?.map((s) => ({
+        type: "bad_weather" as const,
+        stopId: s.stopId,
+        message: `Weather Alert in ${s.cityName} (${s.arrivalDate} to ${s.departureDate}): ${s.forecast.adverseSummary || "Adverse weather expected"}`,
+      })) ?? [];
+
+  const combinedWarnings = [...(warnings || []), ...weatherWarnings];
   const cover = trip.coverPhotoUrl ?? trip.stops?.find((stop) => stop.city?.imageUrl)?.city?.imageUrl ?? null;
   const stopCount = trip.stops?.length ?? 0;
   const activityCount = trip.stops?.reduce((total, stop) => total + stop.activities.length, 0) ?? 0;
@@ -180,7 +194,7 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
         </Card>
       ) : null}
 
-      <WarningsBanner warnings={warnings} />
+      <WarningsBanner warnings={combinedWarnings} />
 
       {budgetData ? (
         <Card className="p-4">

@@ -83,9 +83,10 @@ export interface SerializedTrip {
 }
 
 export interface TripWarning {
-  type: "outside_trip_dates" | "overlapping_stops" | "empty_stop";
+  type: "outside_trip_dates" | "overlapping_stops" | "empty_stop" | "bad_weather";
   stopId: number;
   message: string;
+  severity?: "warning" | "critical" | "info";
 }
 
 export interface ItineraryDay {
@@ -301,4 +302,114 @@ export interface AiPlanInput {
   budget?: number;
   interests?: string[];
   travelStyle?: string;
+}
+
+// ── Weather Types ───────────────────────────────────────────────────
+
+export interface WeatherDaily {
+  date: string;
+  tempMax: number;
+  tempMin: number;
+  condition: string;
+  weatherCode: number;
+  icon: string;
+  precipitationProb: number;
+  precipitationMm: number;
+  windSpeedKm: number;
+  isAdverse: boolean;
+  adverseReason: string | null;
+}
+
+export interface WeatherForecast {
+  cityId?: number;
+  cityName: string;
+  country: string;
+  latitude: number;
+  longitude: number;
+  source: "google" | "open-meteo" | "fallback";
+  hasAdverseWeather: boolean;
+  adverseSummary: string | null;
+  days: WeatherDaily[];
+}
+
+export interface TripWeatherResponse {
+  tripId: number;
+  hasAdverseWeather: boolean;
+  stopForecasts: Array<{
+    stopId: number;
+    cityId: number;
+    cityName: string;
+    country: string;
+    arrivalDate: string;
+    departureDate: string;
+    forecast: WeatherForecast;
+  }>;
+}
+
+// ── Hotel Types (Overpass OSM) ──────────────────────────────────────
+
+export interface Hotel {
+  id: string;
+  name: string;
+  stars: number | null;
+  address: string;
+  street: string | null;
+  city: string;
+  postcode: string | null;
+  country: string;
+  latitude: number;
+  longitude: number;
+  website: string | null;
+  phone: string | null;
+  email: string | null;
+  amenities: string[];
+  estimatedPricePerNight: number;
+  distanceKm: number;
+  rooms?: number | null;
+  wheelchair?: boolean | null;
+}
+
+export interface HotelListResponse {
+  cityName: string;
+  country: string;
+  total: number;
+  hotels: Hotel[];
+}
+
+// ── Food Suggestion Types (Groq) ────────────────────────────────────
+
+export interface FoodEatery {
+  name: string;
+  type: string;
+  approxDistance?: string;
+  description: string;
+  priceLevel?: string;
+}
+
+export interface FoodItem {
+  dish: string;
+  localName: string;
+  description: string;
+  category: "must_try" | "street_food" | "sweet_dessert" | "beverage" | "classic";
+  estimatedCost: number;
+  whySpecial: string;
+  foodieTip: string;
+  bestPlacesNearHotel: FoodEatery[];
+}
+
+export interface FoodSuggestionsResponse {
+  cityName: string;
+  country: string;
+  hotelName: string | null;
+  cuisineOverview: string;
+  source: "groq" | "fallback";
+  foods: FoodItem[];
+}
+
+export interface AiFoodSuggestionsInput {
+  cityName: string;
+  country?: string;
+  hotelName?: string | null;
+  hotelAddress?: string | null;
+  dietaryPreference?: string;
 }

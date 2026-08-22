@@ -2,8 +2,9 @@ import { api } from "./client";
 import type {
   ActivityListResponse,
   AddStopActivityInput,
-  AiOptimizeResponse,
+  AiFoodSuggestionsInput,
   AiHomeChatResponse,
+  AiOptimizeResponse,
   AiPlanInput,
   AiPlanResponse,
   AiRecommendResponse,
@@ -14,6 +15,8 @@ import type {
   CreateStopInput,
   CreateTripInput,
   DashboardResponse,
+  FoodSuggestionsResponse,
+  HotelListResponse,
   PublicTripResponse,
   SerializedActivity,
   SerializedCity,
@@ -26,9 +29,11 @@ import type {
   TripDeepResponse,
   TripListResponse,
   TripScope,
+  TripWeatherResponse,
   UpdateStopActivityInput,
   UpdateStopInput,
   UpdateTripInput,
+  WeatherForecast,
 } from "@/lib/types";
 
 export { ApiError } from "./client";
@@ -109,4 +114,18 @@ export const ai = {
   recommend: (tripId: number, limit = 3) => api.post<AiRecommendResponse>("/ai/recommend", { tripId, limit }),
   optimize: (tripId: number, targetBudget: number) =>
     api.post<AiOptimizeResponse>("/ai/optimize", { tripId, targetBudget }),
+  foodSuggestions: (data: AiFoodSuggestionsInput) =>
+    api.post<FoodSuggestionsResponse>("/ai/food-suggestions", data),
+};
+
+export const weather = {
+  getCityWeather: (cityId: number, startDate?: string, endDate?: string) =>
+    api.get<{ forecast: WeatherForecast }>(`/weather/city/${cityId}`, { startDate, endDate }),
+  getTripWeather: (tripId: number) =>
+    api.get<TripWeatherResponse>(`/weather/trip/${tripId}`),
+};
+
+export const hotels = {
+  list: (params: { cityId?: number; cityName?: string; country?: string; q?: string; stars?: number; maxPrice?: number; limit?: number }) =>
+    api.get<HotelListResponse>("/hotels", params),
 };

@@ -6,7 +6,7 @@ import { serializeActivity, serializeCity, serializeTrip } from '../services/ser
 import { getOwnedTrip } from '../services/trip.service.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { addDays, daysBetween, formatDateOnly, toDateOnly } from '../utils/dates.js';
-import type { AiHomeChatInput, AiOptimizeInput, AiPlanInput, AiScheduleInput, AiTripInput } from '../validators/ai.validators.js';
+import type { AiFoodSuggestionsInput, AiHomeChatInput, AiOptimizeInput, AiPlanInput, AiScheduleInput, AiTripInput } from '../validators/ai.validators.js';
 
 const categoryForInterest = (interest: string): string | null => {
   const value = interest.toLowerCase();
@@ -1102,3 +1102,243 @@ export const optimizeTrip = asyncHandler(async (req: Request, res: Response) => 
         : 'Preview only: confirm manually by removing or swapping activities in the builder.',
   });
 });
+
+export const getFoodSuggestions = asyncHandler(async (req: Request, res: Response) => {
+  const { cityName, country = '', hotelName = null, hotelAddress = null, dietaryPreference = 'all' } = req.body as AiFoodSuggestionsInput;
+
+  if (env.groqApiKey) {
+    try {
+      const hotelContext = hotelName
+        ? `The user is specifically staying at or viewing hotel: "${hotelName}" located at "${hotelAddress || cityName}". Recommend authentic eateries and dishes located near or easily reachable from this hotel area.`
+        : `The user is exploring food across ${cityName}, ${country}.`;
+
+      const prompt = `You are a renowned culinary expert and local foodie guide.
+Suggest 4-6 of the most iconic, famous, and delicious must-try dishes and culinary experiences for:
+Destination: ${cityName}, ${country}
+${hotelContext}
+Dietary Preference: ${dietaryPreference}
+
+Return a valid JSON object matching this exact schema:
+{
+  "cuisineOverview": "2 engaging sentences highlighting the gastronomic heritage and flavor highlights of this city.",
+  "foods": [
+    {
+      "dish": "Popular Name of the Dish",
+      "localName": "Native / Regional name",
+      "description": "Appetizing description of ingredients, flavors, and why travelers must taste it.",
+      "category": "must_try", // one of: "must_try", "street_food", "sweet_dessert", "beverage", "classic"
+      "estimatedCost": 350, // estimated price in INR (e.g. 150 to 1200)
+      "whySpecial": "What makes the preparation or heritage unique.",
+      "foodieTip": "Insider secret (e.g. best paired with fresh espresso, visit before 10 AM, ask for extra sauce).",
+      "bestPlacesNearHotel": [
+        {
+          "name": "Iconic Eatery / Trattoria / Cafe Name",
+          "type": "Bistro / Street Stall / Bakery / Restaurant",
+          "approxDistance": "400m from stay (6 min walk)",
+          "description": "Famous for their artisanal recipe and fresh local ingredients.",
+          "priceLevel": "₹₹"
+        }
+      ]
+    }
+  ]
+}
+Only output the JSON object without any additional markdown formatting.`;
+
+      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${env.groqApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: env.groqModel,
+          temperature: 0.5,
+          response_format: { type: 'json_object' },
+          messages: [
+            {
+              role: 'system',
+              content: 'You are an expert food & travel critic. Provide vivid, highly authentic local culinary recommendations in valid JSON format.',
+            },
+            {
+              role: 'user',
+              content: prompt,
+            },
+          ],
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json() as any;
+        const content = data.choices?.[0]?.message?.content;
+        if (content) {
+          const parsed = JSON.parse(content);
+          if (parsed.foods && Array.isArray(parsed.foods) && parsed.foods.length > 0) {
+            res.json({
+              cityName,
+              country,
+              hotelName,
+              cuisineOverview: parsed.cuisineOverview || `Authentic and world-renowned culinary specialties of ${cityName}.`,
+              source: 'groq',
+              foods: parsed.foods,
+            });
+            return;
+          }
+        }
+      } else {
+        console.warn('Groq food suggestions failed', response.status, await response.text().catch(() => ''));
+      }
+    } catch (err) {
+      console.warn('Groq food suggestions error, using fallback', err);
+    }
+  }
+
+  // Fallback culinary recommendations
+  const fallback = generateFallbackFoodSuggestions(cityName, country, hotelName);
+  res.json(fallback);
+});
+
+function generateFallbackFoodSuggestions(cityName: string, country: string, hotelName: string | null) {
+  const cityKey = cityName.toLowerCase();
+  
+  const foodDatabase: Record<string, any[]> = {
+    paris: [
+      {
+        dish: 'Artisanal Croissant & Pain au Chocolat',
+        localName: 'Croissant au Beurre',
+        description: 'Flaky, buttery, multi-layered golden pastry baked fresh daily.',
+        category: 'must_try',
+        estimatedCost: 350,
+        whySpecial: 'Traditional French lamination with high-fat Normandy butter.',
+        foodieTip: 'Pair with a cafe noisette in the morning.',
+        bestPlacesNearHotel: [
+          { name: 'Du Pain et des Idées', type: 'Bakery', approxDistance: '500m from stay', description: 'Legendary Parisian boulangerie', priceLevel: '₹' },
+          { name: 'Mamiche', type: 'Artisan Bakery', approxDistance: '800m', description: 'Warm fresh morning batches', priceLevel: '₹' }
+        ]
+      },
+      {
+        dish: 'Croque Monsieur & Truffle Fries',
+        localName: 'Croque-Monsieur',
+        description: 'Toasted sourdough with grilled ham, gruyère cheese and rich béchamel sauce.',
+        category: 'classic',
+        estimatedCost: 850,
+        whySpecial: 'Broiled till bubbly golden brown with authentic comte cheese.',
+        foodieTip: 'Order the Croque Madame if you prefer a sunny-side fried egg on top.',
+        bestPlacesNearHotel: [
+          { name: 'Café de Flore', type: 'Historic Bistro', approxDistance: '600m from stay', description: 'Classic Saint-Germain landmark', priceLevel: '₹₹₹' }
+        ]
+      },
+      {
+        dish: 'Beef Bourguignon',
+        localName: 'Boeuf Bourguignon',
+        description: 'Tender braised beef simmered for hours in red Burgundy wine with pearl onions and mushrooms.',
+        category: 'must_try',
+        estimatedCost: 1400,
+        whySpecial: 'Slow-cooked tradition that melts in your mouth.',
+        foodieTip: 'Soak up the sauce with a piece of fresh crusty baguette.',
+        bestPlacesNearHotel: [
+          { name: 'Les Antiquaires', type: 'Traditional Bistro', approxDistance: '450m from stay', description: 'Cozy setting with vintage decor', priceLevel: '₹₹' }
+        ]
+      }
+    ],
+    rome: [
+      {
+        dish: 'Authentic Cacio e Pepe',
+        localName: 'Tonnarelli Cacio e Pepe',
+        description: 'Handmade fresh tonnarelli pasta emulsified with aged Pecorino Romano and cracked black pepper.',
+        category: 'must_try',
+        estimatedCost: 850,
+        whySpecial: 'Only 3 ingredients, creating a creamy velvety sauce without cream or butter.',
+        foodieTip: 'Twirl with pasta water while piping hot.',
+        bestPlacesNearHotel: [
+          { name: 'Da Enzo al 29', type: 'Trattoria', approxDistance: '400m from stay', description: 'Beloved neighborhood gem in Trastevere', priceLevel: '₹₹' }
+        ]
+      },
+      {
+        dish: 'Crispy Roman Supplì',
+        localName: 'Supplì al Telefono',
+        description: 'Fried rice croquette stuffed with slow-cooked ragù and melted mozzarella strings.',
+        category: 'street_food',
+        estimatedCost: 250,
+        whySpecial: 'Mozzarella stretches like a telephone wire when pulled apart.',
+        foodieTip: 'Eat fresh while warm for the ultimate cheese pull.',
+        bestPlacesNearHotel: [
+          { name: 'Supplì Roma', type: 'Street Food Stall', approxDistance: '350m from stay', description: 'Crispy perfection served hot daily', priceLevel: '₹' }
+        ]
+      },
+      {
+        dish: 'Traditional Pistachio Gelato',
+        localName: 'Gelato Artigianale',
+        description: 'Creamy artisanal gelato churned from Bronte pistachios without artificial additives.',
+        category: 'sweet_dessert',
+        estimatedCost: 320,
+        whySpecial: 'Dense, slow-churned Italian texture served in a crisp wafer cone.',
+        foodieTip: 'Top with fresh whipped panna (cream) for 50 cents extra.',
+        bestPlacesNearHotel: [
+          { name: 'Frigidarium', type: 'Gelateria', approxDistance: '300m from stay', description: 'Free dark chocolate dip on every cone', priceLevel: '₹' }
+        ]
+      }
+    ],
+    tokyo: [
+      {
+        dish: 'Rich Tonkotsu Ramen',
+        localName: '豚骨ラーメン',
+        description: 'Rich, collagen-infused pork bone broth simmered for 18 hours with springy noodles and chashu.',
+        category: 'must_try',
+        estimatedCost: 650,
+        whySpecial: 'Deep savory umami with marinated soft-boiled ajitsuke tamago.',
+        foodieTip: 'Order "Kaedama" for an extra serving of noodles in your leftover broth.',
+        bestPlacesNearHotel: [
+          { name: 'Ichiran Shibuya', type: 'Ramen Counter', approxDistance: '350m from stay', description: 'Solo ramen tasting booths', priceLevel: '₹' }
+        ]
+      },
+      {
+        dish: 'Crispy Takoyaki Octopus Balls',
+        localName: 'たこ焼き',
+        description: 'Sizzling batter balls filled with tender octopus, topped with sweet brown sauce, kewpie mayo, and dancing bonito flakes.',
+        category: 'street_food',
+        estimatedCost: 350,
+        whySpecial: 'Crispy on the outside, molten and velvety on the inside.',
+        foodieTip: 'Poke a small hole first to let the steam escape before taking a bite!',
+        bestPlacesNearHotel: [
+          { name: 'Gindaco', type: 'Street Stall', approxDistance: '200m from stay', description: 'Crispy exterior prepared on copper hotplates', priceLevel: '₹' }
+        ]
+      }
+    ]
+  };
+
+  const matched = foodDatabase[cityKey] || [
+    {
+      dish: `Signature ${cityName} Street Platter`,
+      localName: `Local Delicacy of ${cityName}`,
+      description: `Authentic regional street specialty bursting with fresh local spices and culinary tradition.`,
+      category: 'must_try',
+      estimatedCost: 400,
+      whySpecial: `Centuries-old recipe preserved and cooked fresh by neighborhood cooks.`,
+      foodieTip: `Ask for the house-special dipping sauce and fresh lime.`,
+      bestPlacesNearHotel: [
+        { name: `${cityName} Heritage Market Kitchen`, type: 'Local Eatery', approxDistance: '350m from stay', description: 'Popular with locals and food lovers', priceLevel: '₹' }
+      ]
+    },
+    {
+      dish: `${cityName} Chef Special Roasts`,
+      localName: `Slow Cooked Specialty`,
+      description: `Locally sourced seasonal cuts and vegetables slow cooked over wood fire.`,
+      category: 'classic',
+      estimatedCost: 850,
+      whySpecial: `Wood-fired smoky flavor with authentic regional herbs.`,
+      foodieTip: `Best enjoyed as a relaxed evening dinner.`,
+      bestPlacesNearHotel: [
+        { name: `The Old Town Tavern`, type: 'Bistro & Grill', approxDistance: '500m from stay', description: 'Cozy ambiance with craft drinks', priceLevel: '₹₹' }
+      ]
+    }
+  ];
+
+  return {
+    cityName,
+    country,
+    hotelName,
+    cuisineOverview: `Explore the vibrant local dishes and beloved dining spots in ${cityName}${hotelName ? ` around ${hotelName}` : ''}.`,
+    source: 'fallback',
+    foods: matched,
+  };
+}

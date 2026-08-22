@@ -4,11 +4,12 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import clsx from "clsx";
 import { useAuth } from "@/lib/auth/AuthContext";
-import { CompassIcon, HomeIcon, LogoIcon, MenuIcon, UserIcon } from "@/components/ui/Icons";
+import { BuildingIcon, CompassIcon, HomeIcon, LogoIcon, MenuIcon, UserIcon } from "@/components/ui/Icons";
 
 const links = [
   { href: "/dashboard", label: "Dashboard", Icon: HomeIcon },
   { href: "/trips", label: "My Trips", Icon: CompassIcon },
+  { href: "/hotels", label: "Hotels", Icon: BuildingIcon },
 ];
 
 export function Navbar() {

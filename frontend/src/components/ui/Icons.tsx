@@ -206,3 +206,70 @@ export function ClockIcon(props: IconProps) {
     </IconBase>
   );
 }
+
+export function SunIcon(props: IconProps) {
+  return (
+    <IconBase {...props}>
+      <circle cx="12" cy="12" r="4" />
+      <path d="M12 2v2" />
+      <path d="M12 20v2" />
+      <path d="m4.93 4.93 1.41 1.41" />
+      <path d="m17.66 17.66 1.41 1.41" />
+      <path d="M2 12h2" />
+      <path d="M20 12h2" />
+      <path d="m6.34 17.66-1.41 1.41" />
+      <path d="m19.07 4.93-1.41 1.41" />
+    </IconBase>
+  );
+}
+
+export function CloudRainIcon(props: IconProps) {
+  return (
+    <IconBase {...props}>
+      <path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242" />
+      <path d="m16 14-2 6" />
+      <path d="m8 14-2 6" />
+      <path d="m12 16-2 6" />
+    </IconBase>
+  );
+}
+
+export function BuildingIcon(props: IconProps) {
+  return (
+    <IconBase {...props}>
+      <rect width="16" height="20" x="4" y="2" rx="2" ry="2" />
+      <path d="M9 22v-4h6v4" />
+      <path d="M8 6h.01" />
+      <path d="M16 6h.01" />
+      <path d="M12 6h.01" />
+      <path d="M12 10h.01" />
+      <path d="M12 14h.01" />
+      <path d="M16 10h.01" />
+      <path d="M16 14h.01" />
+      <path d="M8 10h.01" />
+      <path d="M8 14h.01" />
+    </IconBase>
+  );
+}
+
+export function UtensilsIcon(props: IconProps) {
+  return (
+    <IconBase {...props}>
+      <path d="M18 2v6a3 3 0 0 1-3 3 3 3 0 0 1-3-3V2" />
+      <path d="M15 11v11" />
+      <path d="M5 2v10a3 3 0 0 0 3 3v7" />
+      <path d="M9 2v4" />
+    </IconBase>
+  );
+}
+
+export function BedIcon(props: IconProps) {
+  return (
+    <IconBase {...props}>
+      <path d="M2 4v16" />
+      <path d="M2 8h18a2 2 0 0 1 2 2v10" />
+      <path d="M2 17h20" />
+      <path d="M6 8v9" />
+    </IconBase>
+  );
+}

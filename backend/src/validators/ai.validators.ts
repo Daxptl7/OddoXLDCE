@@ -27,8 +27,17 @@ export const aiScheduleSchema = z.object({
   tripId: z.coerce.number().int().positive().optional(),
 });
 
+export const aiFoodSuggestionsSchema = z.object({
+  cityName: z.string().trim().min(1).max(100),
+  country: z.string().trim().max(100).optional().default(''),
+  hotelName: z.string().trim().max(150).optional().nullable(),
+  hotelAddress: z.string().trim().max(250).optional().nullable(),
+  dietaryPreference: z.string().trim().max(50).optional().default('all'),
+});
+
 export type AiPlanInput = z.infer<typeof aiPlanSchema>;
 export type AiTripInput = z.infer<typeof aiTripSchema>;
 export type AiOptimizeInput = z.infer<typeof aiOptimizeSchema>;
 export type AiHomeChatInput = z.infer<typeof aiHomeChatSchema>;
 export type AiScheduleInput = z.infer<typeof aiScheduleSchema>;
+export type AiFoodSuggestionsInput = z.infer<typeof aiFoodSuggestionsSchema>;

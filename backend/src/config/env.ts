@@ -20,6 +20,7 @@ export interface Env {
   publicAppUrl: string;
   groqApiKey?: string;
   groqModel: string;
+  googleWeatherApiKey?: string;
   readonly isProd: boolean;
 }
 
@@ -35,7 +36,8 @@ export const env: Env = {
     .filter(Boolean),
   publicAppUrl: process.env.PUBLIC_APP_URL ?? 'http://localhost:5173',
   groqApiKey: process.env.GROQ_API_KEY,
-  groqModel: process.env.GROQ_MODEL ?? 'openai/gpt-oss-20b',
+  groqModel: process.env.GROQ_MODEL ?? 'llama-3.3-70b-versatile',
+  googleWeatherApiKey: process.env.GOOGLE_WEATHER_API_KEY || process.env.GOOGLE_MAPS_API_KEY,
   get isProd(): boolean {
     return this.nodeEnv === 'production';
   },

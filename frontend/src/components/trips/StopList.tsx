@@ -22,15 +22,31 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { StopActivityRow } from "./StopActivityRow";
 import { StopFormModal } from "./StopFormModal";
 import { ActivityPicker } from "./ActivityPicker";
+import { WeatherWidget } from "@/components/weather/WeatherWidget";
+import { HotelExplorerModal } from "@/components/hotels/HotelExplorerModal";
+import { FoodSuggestionsModal } from "@/components/food/FoodSuggestionsModal";
 import { useDeleteStop, useReorderStops } from "@/hooks/useStops";
 import { formatDateRange, formatMoney } from "@/lib/format";
 import type { SerializedStop } from "@/lib/types";
-import { CompassIcon, EditIcon, GripIcon, MapPinIcon, PlusIcon, TrashIcon, WalletIcon } from "@/components/ui/Icons";
+import {
+  BedIcon,
+  CompassIcon,
+  EditIcon,
+  GripIcon,
+  MapPinIcon,
+  PlusIcon,
+  TrashIcon,
+  UtensilsIcon,
+  WalletIcon,
+} from "@/components/ui/Icons";
 
 export function StopList({ tripId, stops }: { tripId: number; stops: SerializedStop[] }) {
   const [addOpen, setAddOpen] = useState(false);
   const [editingStop, setEditingStop] = useState<SerializedStop | null>(null);
   const [activityStop, setActivityStop] = useState<SerializedStop | null>(null);
+  const [hotelStop, setHotelStop] = useState<SerializedStop | null>(null);
+  const [foodStop, setFoodStop] = useState<SerializedStop | null>(null);
+
   const reorderStops = useReorderStops(tripId);
   const deleteStop = useDeleteStop(tripId);
 
@@ -84,6 +100,8 @@ export function StopList({ tripId, stops }: { tripId: number; stops: SerializedS
                   onEdit={() => setEditingStop(stop)}
                   onDelete={() => deleteStop.mutate(stop.id)}
                   onAddActivity={() => setActivityStop(stop)}
+                  onOpenHotels={() => setHotelStop(stop)}
+                  onOpenFood={() => setFoodStop(stop)}
                 />
               ))}
             </div>
@@ -96,6 +114,32 @@ export function StopList({ tripId, stops }: { tripId: number; stops: SerializedS
         <StopFormModal tripId={tripId} open stop={editingStop} onClose={() => setEditingStop(null)} />
       ) : null}
       <ActivityPicker tripId={tripId} stop={activityStop} open={activityStop !== null} onClose={() => setActivityStop(null)} />
+
+      {hotelStop && hotelStop.city ? (
+        <HotelExplorerModal
+          open={Boolean(hotelStop)}
+          onClose={() => setHotelStop(null)}
+          tripId={tripId}
+          stopId={hotelStop.id}
+          cityId={hotelStop.cityId}
+          cityName={hotelStop.city.name}
+          country={hotelStop.city.country}
+          nights={hotelStop.nights}
+          currentAccommodationCost={hotelStop.accommodationCost}
+          currentNotes={hotelStop.notes}
+        />
+      ) : null}
+
+      {foodStop && foodStop.city ? (
+        <FoodSuggestionsModal
+          open={Boolean(foodStop)}
+          onClose={() => setFoodStop(null)}
+          cityName={foodStop.city.name}
+          country={foodStop.city.country}
+          tripId={tripId}
+          stopId={foodStop.id}
+        />
+      ) : null}
     </div>
   );
 }
@@ -106,12 +150,16 @@ function SortableStopCard({
   onEdit,
   onDelete,
   onAddActivity,
+  onOpenHotels,
+  onOpenFood,
 }: {
   tripId: number;
   stop: SerializedStop;
   onEdit: () => void;
   onDelete: () => void;
   onAddActivity: () => void;
+  onOpenHotels: () => void;
+  onOpenFood: () => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: stop.id });
 
@@ -151,14 +199,25 @@ function SortableStopCard({
                 <GripIcon className="h-5 w-5" />
               </button>
               <div>
-                <p className="font-bold text-foreground">
-                  {stop.city?.name}, <span className="font-semibold text-muted">{stop.city?.country}</span>
-                </p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="font-bold text-foreground text-base">
+                    {stop.city?.name}, <span className="font-semibold text-muted">{stop.city?.country}</span>
+                  </p>
+                  {stop.city ? (
+                    <WeatherWidget
+                      cityId={stop.city.id}
+                      cityName={stop.city.name}
+                      startDate={stop.arrivalDate}
+                      endDate={stop.departureDate}
+                    />
+                  ) : null}
+                </div>
+
                 <p className="mt-1 inline-flex items-center gap-1.5 text-sm text-muted">
                   <CompassIcon className="h-4 w-4 text-primary" />
                   {formatDateRange(stop.arrivalDate, stop.departureDate)} · {stop.nights} {stop.nights === 1 ? "night" : "nights"}
                 </p>
-                {stop.notes ? <p className="mt-2 text-sm text-muted">{stop.notes}</p> : null}
+                {stop.notes ? <p className="mt-2 text-xs text-muted leading-relaxed">{stop.notes}</p> : null}
               </div>
             </div>
             <div className="flex items-center gap-1">
@@ -192,10 +251,23 @@ function SortableStopCard({
                 No activities planned yet.
               </p>
             )}
-            <Button size="sm" variant="secondary" className="self-start" onClick={onAddActivity}>
-              <PlusIcon className="h-4 w-4" />
-              Add activity
-            </Button>
+
+            <div className="flex flex-wrap items-center gap-2 pt-1">
+              <Button size="sm" variant="secondary" onClick={onAddActivity}>
+                <PlusIcon className="h-4 w-4" />
+                Add activity
+              </Button>
+
+              <Button size="sm" variant="secondary" onClick={onOpenHotels} title="Search live hotels from OpenStreetMap">
+                <BedIcon className="h-4 w-4 text-primary" />
+                Find hotels
+              </Button>
+
+              <Button size="sm" variant="secondary" onClick={onOpenFood} title="Groq AI Best Local Foods & Eateries">
+                <UtensilsIcon className="h-4 w-4 text-orange-500" />
+                Food & Delicacies
+              </Button>
+            </div>
           </div>
         </div>
       </div>

@@ -65,9 +65,91 @@ export interface TripBudget {
 // ── Trip warnings ────────────────────────────────────────────────────
 
 export interface TripWarning {
-  type: 'outside_trip_dates' | 'overlapping_stops' | 'empty_stop';
+  type: 'outside_trip_dates' | 'overlapping_stops' | 'empty_stop' | 'bad_weather';
   stopId: number;
   message: string;
+  severity?: 'warning' | 'critical' | 'info';
+}
+
+// ── Weather Types ───────────────────────────────────────────────────
+
+export interface WeatherDaily {
+  date: string;
+  tempMax: number;
+  tempMin: number;
+  condition: string;
+  weatherCode: number;
+  icon: string;
+  precipitationProb: number;
+  precipitationMm: number;
+  windSpeedKm: number;
+  isAdverse: boolean;
+  adverseReason: string | null;
+}
+
+export interface WeatherForecast {
+  cityId?: number;
+  cityName: string;
+  country: string;
+  latitude: number;
+  longitude: number;
+  source: 'google' | 'open-meteo' | 'fallback';
+  hasAdverseWeather: boolean;
+  adverseSummary: string | null;
+  days: WeatherDaily[];
+}
+
+// ── Hotel Types (Overpass OSM) ──────────────────────────────────────
+
+export interface Hotel {
+  id: string;
+  name: string;
+  stars: number | null;
+  address: string;
+  street: string | null;
+  city: string;
+  postcode: string | null;
+  country: string;
+  latitude: number;
+  longitude: number;
+  website: string | null;
+  phone: string | null;
+  email: string | null;
+  amenities: string[];
+  estimatedPricePerNight: number;
+  distanceKm: number;
+  rooms?: number | null;
+  wheelchair?: boolean | null;
+}
+
+// ── Food Suggestion Types ───────────────────────────────────────────
+
+export interface FoodEatery {
+  name: string;
+  type: string;
+  approxDistance?: string;
+  description: string;
+  priceLevel?: string;
+}
+
+export interface FoodItem {
+  dish: string;
+  localName: string;
+  description: string;
+  category: 'must_try' | 'street_food' | 'sweet_dessert' | 'beverage' | 'classic';
+  estimatedCost: number;
+  whySpecial: string;
+  foodieTip: string;
+  bestPlacesNearHotel: FoodEatery[];
+}
+
+export interface FoodSuggestionsResult {
+  cityName: string;
+  country: string;
+  hotelName: string | null;
+  cuisineOverview: string;
+  source: 'groq' | 'fallback';
+  foods: FoodItem[];
 }
 
 // ── Itinerary ────────────────────────────────────────────────────────
