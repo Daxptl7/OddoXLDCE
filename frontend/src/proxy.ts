@@ -15,8 +15,10 @@ export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const hasToken = Boolean(request.cookies.get(TOKEN_COOKIE)?.value);
 
-  if (pathname === "/") {
-    return NextResponse.redirect(new URL(hasToken ? "/dashboard" : "/login", request.url));
+  // "/" is the public marketing homepage for logged-out visitors; signed-in
+  // visitors are sent straight to their dashboard instead of the pitch.
+  if (pathname === "/" && hasToken) {
+    return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
   if (AUTH_PAGES.includes(pathname) && hasToken) {

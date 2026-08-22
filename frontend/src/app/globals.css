@@ -32,3 +32,33 @@ body {
   background: var(--background);
   color: var(--foreground);
 }
+
+/*
+ * Two images, each held on screen for 4s, then a quick 1s horizontal scroll
+ * to the next one. Row is [img1, img2, img1-dup, img2-dup] (400vw total), so
+ * the loop point (-200vw) lands back on the img1 duplicate — visually
+ * identical to 0%, giving a seamless infinite cycle.
+ */
+@keyframes hero-scroll-x {
+  0%,
+  40% {
+    transform: translateX(0);
+  }
+  50%,
+  90% {
+    transform: translateX(-100vw);
+  }
+  100% {
+    transform: translateX(-200vw);
+  }
+}
+
+.animate-hero-scroll {
+  animation: hero-scroll-x 10s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-hero-scroll {
+    animation: none;
+  }
+}
